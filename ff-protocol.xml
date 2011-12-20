@@ -113,8 +113,20 @@
        <node>/haptic/device[0]/stick-shaker/period</node>
      </chunk>
 
+     <chunk>
+       <name>Stick_shaker_trigger</name>
+       <format>%d</format>
+       <node>/haptic/device[0]/stick-shaker/trigger</node>
+     </chunk>
+
 
     <!-- Device 1 -->
+
+    <!-- Device 2 -->
+
+    <!-- Device 3 -->
+
+
    </output>
 </generic>
 </PropertyList>

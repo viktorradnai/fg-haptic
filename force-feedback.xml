@@ -56,6 +56,10 @@
         <command>dialog-apply</command>
         <object-name>selected-device</object-name>
       </binding>
+      <binding>
+        <command>nasal</command>
+        <script>changeDevice();</script>
+      </binding>
     </combo>
 
     <empty><stretch>1</stretch></empty>
@@ -177,56 +181,65 @@
         <group>
           <layout>hbox</layout>
 
-          <!-- Aileron -->
+          <!-- X -->
           <group>
             <layout>vbox</layout>
-            <text><label>Aileron</label></text>
+            <text><label>X</label></text>
             <combo>
-              <name>control-surface-aileron</name>
-              <property>/sim/gui/dialogs/force-feedback/control-surface-aileron</property>
-              <value>Off</value>
-              <value>X</value>
-              <value>Y</value>
-              <value>Z</value>
+              <name>control-surface-x</name>
+              <property>/sim/gui/dialogs/force-feedback/control-surface-x</property>
+              <value>None</value>
+              <value>Aileron</value>
+              <value>-Aileron</value>
+              <value>Elevator</value>
+              <value>-Elevator</value>
+              <value>Rudder</value>
+              <value>-Rudder</value>
               <binding>
                 <command>dialog-apply</command>
-                <object-name>control-surface-aileron</object-name>
+                <object-name>control-surface-x</object-name>
               </binding>
             </combo>
           </group>
 
-          <!-- Elevator -->
+          <!-- Y -->
           <group>
             <layout>vbox</layout>
-            <text><label>Elevator</label></text>
+            <text><label>Y</label></text>
             <combo>
-              <name>control-surface-elevator</name>
-              <property>/sim/gui/dialogs/force-feedback/control-surface-elevator</property>
-              <value>Off</value>
-              <value>X</value>
-              <value>Y</value>
-              <value>Z</value>
+              <name>control-surface-y</name>
+              <property>/sim/gui/dialogs/force-feedback/control-surface-y</property>
+              <value>None</value>
+              <value>Aileron</value>
+              <value>-Aileron</value>
+              <value>Elevator</value>
+              <value>-Elevator</value>
+              <value>Rudder</value>
+              <value>-Rudder</value>
               <binding>
                 <command>dialog-apply</command>
-                <object-name>control-surface-elevator</object-name>
+                <object-name>control-surface-y</object-name>
               </binding>
             </combo>
           </group>
 
-          <!-- Rudder -->
+          <!-- Z -->
           <group>
             <layout>vbox</layout>
-            <text><label>Rudder</label></text>
+            <text><label>Z</label></text>
             <combo>
-              <name>control-surface-rudder</name>
-              <property>/sim/gui/dialogs/force-feedback/control-surface-rudder</property>
-              <value>Off</value>
-              <value>X</value>
-              <value>Y</value>
-              <value>Z</value>
+              <name>control-surface-z</name>
+              <property>/sim/gui/dialogs/force-feedback/control-surface-z</property>
+              <value>None</value>
+              <value>Aileron</value>
+              <value>-Aileron</value>
+              <value>Elevator</value>
+              <value>-Elevator</value>
+              <value>Rudder</value>
+              <value>-Rudder</value>
               <binding>
                 <command>dialog-apply</command>
-                <object-name>control-surface-rudder</object-name>
+                <object-name>control-surface-z</object-name>
               </binding>
             </combo>
           </group>
@@ -282,10 +295,13 @@
             <combo>
               <name>pilot-g-x</name>
               <property>/sim/gui/dialogs/force-feedback/pilot-g-x</property>
-              <value>Off</value>
+              <value>None</value>
               <value>X</value>
+              <value>-X</value>
               <value>Y</value>
+              <value>-Y</value>
               <value>Z</value>
+              <value>-Z</value>
               <binding>
                 <command>dialog-apply</command>
                 <object-name>pilot-g-x</object-name>
@@ -300,10 +316,13 @@
             <combo>
               <name>pilot-g-y</name>
               <property>/sim/gui/dialogs/force-feedback/pilot-g-y</property>
-              <value>Off</value>
+              <value>None</value>
               <value>X</value>
+              <value>-X</value>
               <value>Y</value>
+              <value>-Y</value>
               <value>Z</value>
+              <value>-Z</value>
               <binding>
                 <command>dialog-apply</command>
                 <object-name>pilot-g-y</object-name>
@@ -318,10 +337,13 @@
             <combo>
               <name>pilot-g-z</name>
               <property>/sim/gui/dialogs/force-feedback/pilot-g-z</property>
-              <value>Off</value>
+              <value>None</value>
               <value>X</value>
+              <value>-X</value>
               <value>Y</value>
+              <value>-Y</value>
               <value>Z</value>
+              <value>-Z</value>
               <binding>
                 <command>dialog-apply</command>
                 <object-name>pilot-g-z</object-name>
@@ -430,45 +452,126 @@
     <open><![CDATA[
       # Helper functions
 
+      var applyChanges = func {
+        var hapticNode = props.globals.getNode("/haptic", 1);
+        if(hapticNode == nil) return;
+
+        # Loop through devices, and find one with correct name
+        var devices = hapticNode.getChildren("device");
+        forindex(var i; devices)
+        {
+          var name = devices[i].getNode("name").getValue();
+          if(name == getprop("/sim/gui/dialogs/force-feedback/selected-device")) {
+            # Found the device number, apply all values there!
+            setprop("/haptic/device[" ~ i ~ "]/autocenter", getprop("/sim/gui/dialogs/force-feedback/autocenter"));
+            setprop("/haptic/device[" ~ i ~ "]/gain", getprop("/sim/gui/dialogs/force-feedback/gain"));
+            setprop("/haptic/device[" ~ i ~ "]/pilot/gain", getprop("/sim/gui/dialogs/force-feedback/pilot-g-strength"));
+            setprop("/haptic/device[" ~ i ~ "]/surface-force/gain", getprop("/sim/gui/dialogs/force-feedback/surface-force-strength"));
+            setprop("/haptic/device[" ~ i ~ "]/stick-shaker/gain", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-strength"));
+            setprop("/haptic/device[" ~ i ~ "]/stick-shaker/direction", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-direction"));
+            setprop("/haptic/device[" ~ i ~ "]/stick-shaker/period", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-period"));
+            # setprop("/haptic/device[" ~ i ~ "]/", getprop("/sim/gui/dialogs/force-feedback/"));
+            # setprop("/haptic/device[" ~ i ~ "]/", getprop("/sim/gui/dialogs/force-feedback/"));
+
+            gui.dialog_update("force-feedback");
+            return;
+          }
+        }
+      };
+
       # Fill dialog params with selected device
       var fillParams = func(dev) {
-        var effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/autocenter");
-        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/autocenter-enable", "false");
+
+        # TODO: Should probably use gui.enable_widget(...) instead of enable-properties...
+
+        var effect = getprop("/haptic/device[" ~ dev ~ "]/autocenter-supported");
+        if((effect == nil) or (effect == 0)) setprop("/sim/gui/dialogs/force-feedback/autocenter-enable", "false");
         else {
-          setprop("/sim/gui/dialogs/force-feedback/autocenter", effect.getValue());
+          effect = getprop("/haptic/device[" ~ dev ~ "]/autocenter");
+          if(effect == nil) effect = 0;
+
+          setprop("/sim/gui/dialogs/force-feedback/autocenter", effect);
           setprop("/sim/gui/dialogs/force-feedback/autocenter-enable", "true");
         }
 
-        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/gain");
-        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/gain-enable", "false");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/gain-supported");
+        if((effect == nil) or (effect == 0)) setprop("/sim/gui/dialogs/force-feedback/gain-enable", "false");
         else {
-          setprop("/sim/gui/dialogs/force-feedback/gain", effect.getValue());
+          effect = getprop("/haptic/device[" ~ dev ~ "]/gain");
+          if(effect == nil) effect = 1.0;
+
+          setprop("/sim/gui/dialogs/force-feedback/gain", effect);
           setprop("/sim/gui/dialogs/force-feedback/gain-enable", "true");
         }
 
-        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/pilot");
-        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/pilot-g-enable", "false");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/supported");
+        if((effect == nil) or (effect == 0)) setprop("/sim/gui/dialogs/force-feedback/pilot-g-enable", "false");
         else {
-          setprop("/sim/gui/dialogs/force-feedback/pilot-g-strength", effect.getNode("gain").getValue());
+          effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/gain");
+          if(effect == nil) effect = 0;
+
+          setprop("/sim/gui/dialogs/force-feedback/pilot-g-strength", effect);
           setprop("/sim/gui/dialogs/force-feedback/pilot-enable", "true");
         }
 
-        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/surface-force");
-        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/surface-force-enable", "false");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/supported");
+        if((effect == nil) or (effect == 0)) setprop("/sim/gui/dialogs/force-feedback/surface-force-enable", "false");
         else {
-          setprop("/sim/gui/dialogs/force-feedback/surface-force-strength", effect.getNode("gain").getValue());
+          effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/gain");  # TODO: Does not work?
+          if(effect == nil) effect = 0;
+
+          setprop("/sim/gui/dialogs/force-feedback/surface-force-strength", effect);
           setprop("/sim/gui/dialogs/force-feedback/surface-force-enable", "true");
         }
 
-        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/stick-shaker");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/stick-shaker/supported");
         if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/stick-shaker-enable", "false");
         else {
+          effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/stick-shaker");
           setprop("/sim/gui/dialogs/force-feedback/stick-shaker-strength", effect.getNode("gain").getValue());
           setprop("/sim/gui/dialogs/force-feedback/stick-shaker-period", effect.getNode("period").getValue());
           setprop("/sim/gui/dialogs/force-feedback/stick-shaker-direction", effect.getNode("direction").getValue());
           setprop("/sim/gui/dialogs/force-feedback/stick-shaker-enable", "true");
         }
-      }
+
+
+        # TODO: Set combo box default/set values
+
+        # Disable non existing axis
+        effect = getprop("/haptic/device[" ~ dev ~ "]/axes");
+        if(effect != nil) {
+          if(effect < 3) {  # Disable Z axis
+            gui.enable_widgets(cmdarg(), "control-surface-z", 0);
+            gui.enable_widgets(cmdarg(), "pilot-g-z", 0);
+          }
+          if(effect < 2) { # Disable also Y axis
+            gui.enable_widgets(cmdarg(), "control-surface-y", 0);
+            gui.enable_widgets(cmdarg(), "pilot-g-y", 0);
+          }
+        }
+
+        gui.dialog_update("force-feedback");
+      };
+
+
+      var changeDevice = func {
+        var hapticNode = props.globals.getNode("/haptic", 1);
+        if(hapticNode == nil) return;
+
+        # Loop through devices, and find one with correct name
+        var devices = hapticNode.getChildren("device");
+        forindex(var i; devices)
+        {
+          var name = devices[i].getNode("name").getValue();
+          if(name == getprop("/sim/gui/dialogs/force-feedback/selected-device")) {
+            # Fill the parameters for this device
+            fillParams(i);
+            return;
+          }
+        }
+        # Not found, some kind of error! Let it be as is.
+      };
+
 
       # Find the combo box for devices
       var devicesCombo = cmdarg().getNode("group[1]/combo");
@@ -486,14 +589,15 @@
       {
         var name = devices[i].getNode("name");
         if(name == nil) {
-          die("Haptic device " ~ i ~ " has no name!");
-        }
-        name = name.getValue();
-        devicesCombo.getChild("value", i, 1).setValue(name);
+          # Might be a dummy item from generic io
+        } else {
+          name = name.getValue();
+          devicesCombo.getChild("value", i, 1).setValue(name);
 
-        # Select 1st device by default
-        if(i == 0) {
-          setprop("/sim/gui/dialogs/force-feedback/selected-device", name);
+          # Select 1st device by default
+          if(i == 0) {
+            setprop("/sim/gui/dialogs/force-feedback/selected-device", name);
+          }
         }
       }
 

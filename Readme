@@ -44,7 +44,7 @@ inside Flight Gear's data directory.
 force-feedback.nas must be copied into Nasal/ directory 
 inside Flight Gear's data directory.
 
-ff-protocol.xml must be copied into Protocols/ directory
+ff-protocol.xml must be copied into Protocol/ directory
 inside Flight Gear's data directory.
 
 TODO: Menu item? Maybe force-feedback.nas will create that?
