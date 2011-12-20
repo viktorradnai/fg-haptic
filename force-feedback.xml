@@ -1,0 +1,511 @@
+<?xml version="1.0"?>
+
+<PropertyList>
+  <name>force-feedback</name>
+  <!-- <dialog-name>force-feedback</dialog-name> -->
+
+  <!-- <padding>20</padding> -->
+  <layout>vbox</layout>
+
+  <!-- Dialog header -->
+  <group>
+    <layout>hbox</layout>
+    <empty><stretch>1</stretch></empty>
+
+    <text>
+      <label>Force-feedback options</label>
+    </text>
+
+    <empty><stretch>1</stretch></empty>
+
+    <!-- Close button -->
+    <button>
+      <pref-width>16</pref-width>
+      <pref-height>16</pref-height>
+      <legend></legend>
+      <keynum>27</keynum>
+      <border>2</border>
+      <binding>
+        <command>dialog-close</command>
+      </binding>
+    </button>
+  </group>
+
+
+  <hrule><stretch>1</stretch></hrule>
+
+
+  <!-- Device list -->
+  <group>
+    <layout>hbox</layout>
+
+    <empty><stretch>1</stretch></empty>
+
+    <text>
+      <label>Device</label>
+    </text>
+
+    <combo>
+      <name>selected-device</name>
+      <width>400</width>
+      <property>/sim/gui/dialogs/force-feedback/selected-device</property>
+      <stretch>1</stretch>
+      <value>Test1</value>
+      <value>Test2 with space</value>
+      <binding>
+        <command>dialog-apply</command>
+        <object-name>selected-device</object-name>
+      </binding>
+    </combo>
+
+    <empty><stretch>1</stretch></empty>
+
+  </group>
+
+
+  <!-- Autocenter and gain -->
+  <group>
+    <layout>hbox</layout>
+
+    <empty><stretch>1</stretch></empty>
+
+    <text>
+      <label>Autocenter</label>
+      <enable><property>/sim/gui/dialogs/force-feedback/autocenter-enable</property></enable>
+    </text>
+    <slider>
+      <name>autocenter</name>
+      <!-- <width>100</width> -->
+      <property>/sim/gui/dialogs/force-feedback/autocenter</property>
+      <min>0</min>
+      <max>1</max>
+      <step>0.01</step>
+      <binding>
+        <command>dialog-apply</command>
+        <object-name>autocenter</object-name>
+      </binding>
+      <enable><property>/sim/gui/dialogs/force-feedback/autocenter-enable</property></enable>
+    </slider>
+    <text>
+      <label>0.00</label>
+      <property>/sim/gui/dialogs/force-feedback/autocenter</property>
+      <format>%-0.2f</format>
+      <live>true</live>
+      <enable><property>/sim/gui/dialogs/force-feedback/autocenter-enable</property></enable>
+    </text>
+
+    <empty><stretch>1</stretch></empty>
+
+    <text>
+      <label>Gain</label>
+      <enable><property>/sim/gui/dialogs/force-feedback/gain-enable</property></enable>
+    </text>
+    <slider>
+      <name>gain</name>
+      <!-- <width>100</width> -->
+      <property>/sim/gui/dialogs/force-feedback/gain</property>
+      <min>0</min>
+      <max>1</max>
+      <step>0.01</step>
+      <binding>
+        <command>dialog-apply</command>
+        <object-name>gain</object-name>
+      </binding>
+      <enable><property>/sim/gui/dialogs/force-feedback/gain-enable</property></enable>
+    </slider>
+    <text>
+      <label>0.00</label>
+      <property>/sim/gui/dialogs/force-feedback/gain</property>
+      <format>%-0.2f</format>
+      <live>true</live>
+      <enable><property>/sim/gui/dialogs/force-feedback/gain-enable</property></enable>
+    </text>
+
+    <empty><stretch>1</stretch></empty>
+
+  </group>
+
+
+  <hrule><stretch>1</stretch></hrule>
+
+
+  <!-- Frame for all force feedback options -->
+  <group>
+    <layout>hbox</layout>
+
+    <!-- Left side -->
+    <group>
+      <layout>vbox</layout>
+
+      <!-- Control surface loading -->
+      <group>
+        <layout>vbox</layout>
+
+        <!-- Name and strength -->
+        <group>
+          <layout>hbox</layout>
+          <text><label>Control surface forces</label></text>
+          <hrule><stretch>1</stretch></hrule>
+        </group>
+
+        <!-- Slider -->
+        <group>
+          <name>control-surface-strength</name>
+          <layout>hbox</layout>
+          <text><label>Strength</label></text>
+          <slider>
+            <name>control-surface-strength</name>
+            <!-- <width>100</width> -->
+            <property>/sim/gui/dialogs/force-feedback/control-surface-strength</property>
+            <min>0</min>
+            <max>1</max>
+            <step>0.01</step>
+            <binding>
+              <command>dialog-apply</command>
+              <object-name>control-surface-strength</object-name>
+            </binding>
+          </slider>
+          <text>
+            <label>0.00</label>
+            <property>/sim/gui/dialogs/force-feedback/control-surface-strength</property>
+            <format>%-0.2f</format>
+            <live>true</live>
+          </text>
+        </group>
+
+        <!-- Axes binding -->
+        <group>
+          <layout>hbox</layout>
+
+          <!-- Aileron -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>Aileron</label></text>
+            <combo>
+              <name>control-surface-aileron</name>
+              <property>/sim/gui/dialogs/force-feedback/control-surface-aileron</property>
+              <value>Off</value>
+              <value>X</value>
+              <value>Y</value>
+              <value>Z</value>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>control-surface-aileron</object-name>
+              </binding>
+            </combo>
+          </group>
+
+          <!-- Elevator -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>Elevator</label></text>
+            <combo>
+              <name>control-surface-elevator</name>
+              <property>/sim/gui/dialogs/force-feedback/control-surface-elevator</property>
+              <value>Off</value>
+              <value>X</value>
+              <value>Y</value>
+              <value>Z</value>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>control-surface-elevator</object-name>
+              </binding>
+            </combo>
+          </group>
+
+          <!-- Rudder -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>Rudder</label></text>
+            <combo>
+              <name>control-surface-rudder</name>
+              <property>/sim/gui/dialogs/force-feedback/control-surface-rudder</property>
+              <value>Off</value>
+              <value>X</value>
+              <value>Y</value>
+              <value>Z</value>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>control-surface-rudder</object-name>
+              </binding>
+            </combo>
+          </group>
+        </group>
+      </group>
+
+
+      <!-- <hrule><stretch>1</stretch></hrule> -->
+
+      <!-- Pilot G forces -->
+      <group>
+        <layout>vbox</layout>
+
+        <!-- Name and strength -->
+        <group>
+          <layout>hbox</layout>
+          <text><label>Pilot G forces</label></text>
+          <hrule><stretch>1</stretch></hrule>
+        </group>
+
+        <!-- Slider -->
+        <group>
+          <layout>hbox</layout>
+          <text><label>Strength</label></text>
+          <slider>
+            <name>pilot-g-strength</name>
+            <!-- <width>100</width> -->
+            <property>/sim/gui/dialogs/force-feedback/pilot-g-strength</property>
+            <min>0</min>
+            <max>1</max>
+            <step>0.01</step>
+            <binding>
+              <command>dialog-apply</command>
+              <object-name>pilot-g-strength</object-name>
+            </binding>
+          </slider>
+          <text>
+            <label>0.00</label>
+            <property>/sim/gui/dialogs/force-feedback/pilot-g-strength</property>
+            <format>%-0.2f</format>
+            <live>true</live>
+          </text>
+        </group>
+
+        <!-- Axes binding -->
+        <group>
+          <layout>hbox</layout>
+
+          <!-- X -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>X</label></text>
+            <combo>
+              <name>pilot-g-x</name>
+              <property>/sim/gui/dialogs/force-feedback/pilot-g-x</property>
+              <value>Off</value>
+              <value>X</value>
+              <value>Y</value>
+              <value>Z</value>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>pilot-g-x</object-name>
+              </binding>
+            </combo>
+          </group>
+
+          <!-- Y -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>Y</label></text>
+            <combo>
+              <name>pilot-g-y</name>
+              <property>/sim/gui/dialogs/force-feedback/pilot-g-y</property>
+              <value>Off</value>
+              <value>X</value>
+              <value>Y</value>
+              <value>Z</value>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>pilot-g-y</object-name>
+              </binding>
+            </combo>
+          </group>
+
+          <!-- Z -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>Z</label></text>
+            <combo>
+              <name>pilot-g-z</name>
+              <property>/sim/gui/dialogs/force-feedback/pilot-g-z</property>
+              <value>Off</value>
+              <value>X</value>
+              <value>Y</value>
+              <value>Z</value>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>pilot-g-z</object-name>
+              </binding>
+            </combo>
+          </group>
+        </group>
+
+      </group>
+
+
+      <!-- <hrule><stretch>1</stretch></hrule> -->
+
+
+      <!-- Stick shaker -->
+      <group>
+        <layout>vbox</layout>
+
+        <!-- Name -->
+        <group>
+          <layout>hbox</layout>
+          <text><label>Stick shaker</label></text>
+          <hrule><stretch>1</stretch></hrule>
+        </group>
+
+
+        <!-- Direction and strength -->
+        <group>
+          <layout>hbox</layout>
+
+          <!-- Direction -->
+          <group>
+            <layout>vbox</layout>
+            <text><label>Direction</label></text>
+            <dial>
+              <name>stick-shaker-direction</name>
+              <property>/sim/gui/dialogs/force-feedback/stick-shaker-direction</property>
+              <min>0</min>
+              <max>360</max>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>stick-shaker-direction</object-name>
+              </binding>
+            </dial>
+          </group>
+
+          <!-- Strength -->
+          <group>
+            <layout>hbox</layout>
+            <text><label>Strength</label></text>
+            <slider>
+              <name>stick-shaker-strength</name>
+              <!-- <width>100</width> -->
+              <property>/sim/gui/dialogs/force-feedback/stick-shaker-strength</property>
+              <min>0</min>
+              <max>1</max>
+              <step>0.01</step>
+              <binding>
+                <command>dialog-apply</command>
+                <object-name>stick-shaker-strength</object-name>
+              </binding>
+            </slider>
+            <text>
+              <label>0.00</label>
+              <property>/sim/gui/dialogs/force-feedback/stick-shaker-strength</property>
+              <format>%-0.2f</format>
+              <live>true</live>
+            </text>
+          </group>
+        </group>
+      </group>
+
+
+    </group>
+
+    <vrule><stretch>1</stretch></vrule>
+
+    <!-- Right side -->
+    <group>
+      <layout>vbox</layout>
+    </group>
+
+  </group>
+
+
+  <hrule><stretch>1</stretch></hrule>
+
+
+  <!-- Close button -->
+  <group>
+    <layout>hbox</layout>
+
+    <empty><stretch>1</stretch></empty>
+
+    <button>
+      <legend>Close</legend>
+      <binding>
+        <command>dialog-close</command>
+      </binding>
+    </button>
+  </group>
+
+
+  <!-- Nasal scripts to load settings -->
+  <nasal>
+    <open><![CDATA[
+      # Helper functions
+
+      # Fill dialog params with selected device
+      var fillParams = func(dev) {
+        var effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/autocenter");
+        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/autocenter-enable", "false");
+        else {
+          setprop("/sim/gui/dialogs/force-feedback/autocenter", effect.getValue());
+          setprop("/sim/gui/dialogs/force-feedback/autocenter-enable", "true");
+        }
+
+        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/gain");
+        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/gain-enable", "false");
+        else {
+          setprop("/sim/gui/dialogs/force-feedback/gain", effect.getValue());
+          setprop("/sim/gui/dialogs/force-feedback/gain-enable", "true");
+        }
+
+        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/pilot");
+        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/pilot-g-enable", "false");
+        else {
+          setprop("/sim/gui/dialogs/force-feedback/pilot-g-strength", effect.getNode("gain").getValue());
+          setprop("/sim/gui/dialogs/force-feedback/pilot-enable", "true");
+        }
+
+        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/surface-force");
+        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/surface-force-enable", "false");
+        else {
+          setprop("/sim/gui/dialogs/force-feedback/surface-force-strength", effect.getNode("gain").getValue());
+          setprop("/sim/gui/dialogs/force-feedback/surface-force-enable", "true");
+        }
+
+        effect = props.globals.getNode("/haptic/device[" ~ dev ~ "]/stick-shaker");
+        if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/stick-shaker-enable", "false");
+        else {
+          setprop("/sim/gui/dialogs/force-feedback/stick-shaker-strength", effect.getNode("gain").getValue());
+          setprop("/sim/gui/dialogs/force-feedback/stick-shaker-period", effect.getNode("period").getValue());
+          setprop("/sim/gui/dialogs/force-feedback/stick-shaker-direction", effect.getNode("direction").getValue());
+          setprop("/sim/gui/dialogs/force-feedback/stick-shaker-enable", "true");
+        }
+      }
+
+      # Find the combo box for devices
+      var devicesCombo = cmdarg().getNode("group[1]/combo");
+
+      var hapticNode = props.globals.getNode("/haptic", 1);
+      if(hapticNode == nil) {
+        die("No haptic devices found, is fg-haptic running?");
+      }
+
+      var devices = hapticNode.getChildren("device");
+
+      # Remove test variables and fill with real ones
+      devicesCombo.removeChildren("value");
+      forindex(var i; devices)
+      {
+        var name = devices[i].getNode("name");
+        if(name == nil) {
+          die("Haptic device " ~ i ~ " has no name!");
+        }
+        name = name.getValue();
+        devicesCombo.getChild("value", i, 1).setValue(name);
+
+        # Select 1st device by default
+        if(i == 0) {
+          setprop("/sim/gui/dialogs/force-feedback/selected-device", name);
+        }
+      }
+
+      # Fill the parameters for 1st device
+      fillParams(0);
+
+    ]]></open>
+
+
+    <close><![CDATA[
+
+    ]]></close>
+  </nasal>
+
+</PropertyList>
