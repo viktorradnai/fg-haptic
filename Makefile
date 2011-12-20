@@ -9,14 +9,18 @@ LIBS	=  -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL -lpthread
 
 TARGETS = \
 	testhaptic$(EXE) \
-	haptic$(EXE)
+	testramp$(EXE) \
+	fg-haptic$(EXE)
 
 all: $(TARGETS)
 
 testhaptic$(EXE): $(srcdir)/testhaptic.c
 	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
 
-haptic$(EXE): $(srcdir)/haptic.c
+testramp$(EXE): $(srcdir)/testramp.c
+	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
+
+fg-haptic$(EXE): $(srcdir)/fg-haptic.c
 	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
 
 clean:
