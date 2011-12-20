@@ -48,13 +48,13 @@ YASim at least:
 const char axes[AXES] = {'x', 'y', 'z'};
 
 void init_sockaddr(struct sockaddr_in *name, const char *hostname, unsigned port);
-int fgfsconnect(const char *hostname, const int port);
+int fgfsconnect(const char *hostname, const int port, bool server);
 int fgfswrite(int sock, char *msg, ...);
 const char *fgfsread(int sock, int wait);
 void fgfsflush(int sock);
 
 // Socket used to communicate with flightgear
-int sock;
+int sock, server_sock, client_sock;
 
 
 // Effect struct definitions, used to store parameters
@@ -86,6 +86,7 @@ typedef struct __hapticdevice {
     bool open;
 
     SDL_HapticEffect effect[EFFECTS];
+    SDL_HapticEffect previousEffect[EFFECTS];
     int effectId[EFFECTS];
 
     effectParams params;
@@ -142,6 +143,7 @@ void init_haptic(void)
           devices[i].numEffectsPlaying = SDL_HapticNumEffectsPlaying(devices[i].device);
 
           // Write devices to flightgear
+          fgfswrite(sock, "set /haptic/device[%d]/num %d", i, i);
           fgfswrite(sock, "set /haptic/device[%d]/name %s", i, devices[i].name);
           fgfswrite(sock, "set /haptic/device[%d]/supported %d", i, devices[i].supported);
           fgfswrite(sock, "set /haptic/device[%d]/axes %d", i, devices[i].axes);
@@ -159,6 +161,9 @@ void init_haptic(void)
               }
               fgfswrite(sock, "set /haptic/device[%d]/pilot/gain %f", i, 0.5);
               fgfswrite(sock, "set /haptic/device[%d]/surface-force/gain %f", i, 0.5);
+
+              fgfswrite(sock, "set /haptic/device[%d]/pilot/supported 1", i);
+              fgfswrite(sock, "set /haptic/device[%d]/surface-force/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_SINE)
@@ -168,6 +173,7 @@ void init_haptic(void)
               fgfswrite(sock, "set /haptic/device[%d]/stick-shaker/period %d", i, 50);
               fgfswrite(sock, "set /haptic/device[%d]/stick-shaker/gain %d", i, 1);
               fgfswrite(sock, "set /haptic/device[%d]/stick-shaker/trigger %d", i, 0);
+              fgfswrite(sock, "set /haptic/device[%d]/stick-shaker/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_GAIN) fgfswrite(sock, "set /haptic/device[%d]/gain %d", i, 1);
@@ -240,61 +246,27 @@ void create_effects(void)
 
 void read_fg(void)
 {
+    int num, read;
+    effectParams params;
     const char *p;
 
-    for(int i=0; i < num_devices; i++)
+    p = fgfsread(client_sock, TIMEOUT);
+    if(!p) return;  // Null pointer, read failed
+
+    // Divide the buffer into chunks
+    read = sscanf(p, "%d|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f", &num, &params.autocenter, &params.gain, &params.pilot_gain,
+               &params.pilot[0], &params.pilot[1], &params.pilot[2], &params.surface_gain, &params.surface[0], &params.surface[1],
+               &params.surface[2], &params.shaker_gain, &params.shaker_dir, &params.shaker_period);
+
+    if(read != 14) {
+        printf("Error reading generic I/O!\n");
+        return;
+    }
+
+    if(num >= 0 && num < num_devices)
     {
-        if(devices[i].supported & SDL_HAPTIC_CONSTANT)
-        {
-            for(int x=0; x<devices[i].axes && x<AXES; x++)
-            {
-                fgfswrite(sock, "get /haptic/device[%d]/pilot/%c", i, axes[x]);
-                p = fgfsread(sock, TIMEOUT);
-                if (p != NULL) devices[i].params.pilot[x] = atof(p);
-
-                fgfswrite(sock, "get /haptic/device[%d]/surface-force/%c", i, axes[x]);
-                p = fgfsread(sock, TIMEOUT);
-                if (p != NULL) devices[i].params.surface[x] = atof(p);
-            }
-
-            fgfswrite(sock, "get /haptic/device[%d]/pilot/gain", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.pilot_gain = atof(p);
-
-            fgfswrite(sock, "get /haptic/device[%d]/surface-force/gain", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.surface_gain = atof(p);
-        }
-
-        if(devices[i].supported & SDL_HAPTIC_SINE)
-        {
-            fgfswrite(sock, "get /haptic/device[%d]/stick-shaker/direction", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.shaker_dir = atof(p);
-
-            fgfswrite(sock, "get /haptic/device[%d]/stick-shaker/gain", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.shaker_gain = atof(p);
-
-            fgfswrite(sock, "get /haptic/device[%d]/stick-shaker/period", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.shaker_period = atof(p);
-        }
-
-        if(devices[i].supported & SDL_HAPTIC_AUTOCENTER)
-        {
-            fgfswrite(sock, "get /haptic/device[%d]/autocenter", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.autocenter = atof(p);
-        }
-
-        if(devices[i].supported & SDL_HAPTIC_GAIN)
-        {
-            fgfswrite(sock, "get /haptic/device[%d]/gain", i);
-            p = fgfsread(sock, TIMEOUT);
-            if (p != NULL) devices[i].params.gain = atof(p);
-        }
-
+        // Do it the easy way...
+        memcpy(&devices[num].params, &params, sizeof(effectParams));
     }
 }
 
@@ -336,8 +308,15 @@ main(int argc, char **argv)
         }
     }
 
+    // Wait for a connection from flightgear generic io
+    // Open generic I/O connection to flightgear
+    printf("Waiting for flightgear generic IO at port %d, please run Flight Gear now!\n", DFLTPORT+1);
+    server_sock = fgfsconnect(DFLTHOST, DFLTPORT+1, true);
+
+    printf("Got connection, sending haptic details through telnet at port %d\n", DFLTPORT);
+
     // Connect to flightgear
-    sock = fgfsconnect(DFLTHOST, DFLTPORT);
+    sock = fgfsconnect(DFLTHOST, DFLTPORT, false);
     if (sock < 0) {
         printf("Could not connect to flightgear!\n");
         return EXIT_FAILURE;
@@ -349,6 +328,10 @@ main(int argc, char **argv)
     // Initialize SDL haptics and send the devices to flightgear
     init_haptic();
 
+    // Close flightgear telnet connection
+    fgfswrite(sock, "quit");
+    fgfsclose(sock);
+
     create_effects();
 
     // allocate memory for old param values
@@ -359,7 +342,7 @@ main(int argc, char **argv)
     }
 
     // Read and apply initial parameters
-    read_fg();
+    // read_fg();
 
     for(int i=0; i < num_devices; i++)
     {
@@ -374,13 +357,13 @@ main(int argc, char **argv)
     while(true)
     {
         // Back up old parameters
-        for(int i=0; i < num_devices; i++)
+        for(int i=0; i < num_devices; i++) {
             memcpy((void *)&oldParams[i], (void *)&devices[i].params, sizeof(effectParams));
+            memcpy((void *)&devices[i].previousEffect[0], (void *)&devices[i].effect[0], EFFECTS * sizeof(SDL_HapticEffect));
+        }
 
         // Read new parameters
-        printf("Read\n");
         read_fg();
-        printf("Done\n");
 
 
         // If parameters have changed, apply them
@@ -400,12 +383,19 @@ main(int argc, char **argv)
                 float y = devices[i].params.pilot_gain*devices[i].params.pilot[1] + devices[i].params.surface_gain*devices[i].params.surface[1];
                 float z = devices[i].params.pilot_gain*devices[i].params.pilot[2] + devices[i].params.surface_gain*devices[i].params.surface[2];
 
-                float level = sqrt(x*x + y*y + z*z);
+                float level = 0.0;
+                if(devices[i].axes == 1) { level = x; y=z=0.0; }
+                if(devices[i].axes == 2) { level = sqrt(x*x + y*y); z = 0.0; }
+                if(devices[i].axes == 3) level = sqrt(x*x + y*y + z*z);
 
                 devices[i].effect[0].constant.direction.dir[0] = (short)(x * 0x7FFF);
                 devices[i].effect[0].constant.direction.dir[1] = (short)(y * 0x7FFF);
                 devices[i].effect[0].constant.direction.dir[2] = (short)(z * 0x7FFF);
                 devices[i].effect[0].constant.level = (short)(level * 0x7FFF);
+
+                // Add attack to make transition a bit smoother
+                devices[i].effect[0].constant.attack_length = 100;	// 50 ms length in attack
+                devices[i].effect[0].constant.attack_level = devices[i].previousEffect[0].constant.level;  // Previous level
 
 //                if(SDL_HapticUpdateEffect(devices[i].device, devices[i].effectId[0], &devices[i].effect[0]) < 0) printf("Error2: %s\n", SDL_GetError());
                 if((devices[i].effectId[0] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[0])) < 0) printf("Error (new): %s\n", SDL_GetError());
@@ -436,12 +426,10 @@ main(int argc, char **argv)
         }
     }
 
-    SDL_Delay(10000);        /* Effects only have length 5000 */
 
-    // Close flightgear connection
-    fgfswrite(sock, "quit");
-    fgfsclose(sock);
-
+    // Close generic connection
+    fgfsclose(client_sock);
+    fgfsclose(server_sock);
 
     if(oldParams) free(oldParams);
 
@@ -467,9 +455,13 @@ abort_execution(void)
 {
     printf("\nAborting program execution.\n");
 
-    // Close flightgear connection
+    // Close flightgear telnet connection
     fgfswrite(sock, "quit");
     fgfsclose(sock);
+
+    // Adn generic
+    fgfsclose(client_sock);
+    fgfsclose(server_sock);
 
     // Close haptic devices
     for(int i=0; i < num_devices; i++)
@@ -555,8 +547,6 @@ int fgfswrite(int sock, char *msg, ...)
 
 const char *fgfsread(int sock, int timeout)
 {
-#ifdef USE_GENERIC
-#else
         static char buf[MAXMSG];
         char *p;
         fd_set ready;
@@ -585,9 +575,8 @@ const char *fgfsread(int sock, int timeout)
                         break;
         *++p = '\0';
 
-        //if(strlen(buf)) printf("%s\n", buf);
+        if(strlen(buf)) printf("%s\n", buf);
         return strlen(buf) ? buf : NULL;
-#endif
 }
 
 
@@ -600,14 +589,15 @@ void fgfsflush(int sock)
         }
 }
 
-int fgfsconnect(const char *hostname, const int port)
+int fgfsconnect(const char *hostname, const int port, bool server)
 {
-        struct sockaddr_in serv_addr;
+        struct sockaddr_in serv_addr, cli_addr;
+        socklen_t cli_size;
         struct hostent *hostinfo;
-        int sock;
+	int _sock, _clientsock;
 
-        sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (sock < 0) {
+        _sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (_sock < 0) {
                 perror("fgfsconnect/socket");
                 return -1;
         }
@@ -615,7 +605,7 @@ int fgfsconnect(const char *hostname, const int port)
         hostinfo = gethostbyname(hostname);
         if (hostinfo == NULL) {
                 fprintf(stderr, "fgfsconnect: unknown host: \"%s\"\n", hostname);
-                close(sock);
+                close(_sock);
                 return -2;
         }
 
@@ -623,11 +613,29 @@ int fgfsconnect(const char *hostname, const int port)
         serv_addr.sin_port = htons(port);
         serv_addr.sin_addr = *(struct in_addr *)hostinfo->h_addr_list[0];
 
-        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-                perror("fgfsconnect/connect");
-                close(sock);
-                return -3;
-        }
-        return sock;
+	if(!server)  // Act as a client -> connect to address
+	{
+	        if (connect(_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        	        perror("fgfsconnect/connect");
+                	close(_sock);
+	                return -3;
+		}
+        } else { // Act as a server, wait for connections
+		if(bind(_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        	        perror("fgfsconnect/bind");
+                	close(_sock);
+	                return -3;
+		}
+		listen(_sock, 1); // Wait for maximum of 1 conenction
+                cli_size = sizeof(cli_addr);
+		_clientsock = accept(_sock, (struct sockaddr *)&cli_addr, &cli_size);
+		if(_clientsock < 0) {
+        	        perror("fgfsconnect/accept");
+                	close(_sock);
+	                return -3;
+		}
+		client_sock = _clientsock;
+	}
+        return _sock;
 }
 

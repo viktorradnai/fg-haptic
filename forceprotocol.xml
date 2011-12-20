@@ -1,0 +1,121 @@
+<?xml version="1.0"?> 
+
+<!-- Generic protocol to send haptic information from FG to fg-haptic -->
+
+<!-- Format should be following: -->
+<!-- DeviceNumber|autocenter|gain|pilot-gain|pilot-x|y|z|surface-gain|surface-x|y|z|stick-shaker-gain|direction|period|trigger -->
+
+<PropertyList>
+<generic>
+
+   <output>
+     <line_separator>newline</line_separator>
+     <var_separator>|</var_separator>
+     <binary_mode>false</binary_mode>
+
+
+     <!-- Device 0 -->
+
+     <chunk>
+       <name>DeviceNumber_0</name>
+       <format>%d</format>
+       <node>/haptic/device[0]/number</node>
+     </chunk>
+
+     <chunk>
+       <name>Autocenter_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/autocenter</node>
+     </chunk>
+
+     <chunk>
+       <name>Gain_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Gain_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/pilot/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_X_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/pilot/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Y_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/pilot/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Z_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/pilot/z</node>
+     </chunk>
+
+     <chunk>
+       <name>surface-force_Gain_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/surface-force/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_X_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/surface-force/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Y_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/surface-force/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Z_0</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/surface-force/z</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_gain</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/stick-shaker/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_direction</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/stick-shaker/direction</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_period</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/device[0]/stick-shaker/period</node>
+     </chunk>
+
+
+    <!-- Device 1 -->
+   </output>
+</generic>
+</PropertyList>
+
