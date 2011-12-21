@@ -490,8 +490,6 @@ main(int argc, char **argv)
             if(devices[i].supported & SDL_HAPTIC_SINE && (devices[i].params.shaker_dir != oldParams[i].shaker_dir ||
                devices[i].params.shaker_gain != oldParams[i].shaker_gain || devices[i].params.shaker_period != oldParams[i].shaker_period))
             {
-                SDL_HapticDestroyEffect(devices[i].device, devices[i].effectId[1]);
-
                 devices[i].effect[1].periodic.direction.dir[0] = devices[i].params.shaker_dir*100.0;
 
                 devices[i].effect[1].periodic.length = 5000;  // Default 5 seconds?
@@ -499,7 +497,6 @@ main(int argc, char **argv)
                 devices[i].effect[1].periodic.magnitude = (unsigned short)(devices[i].params.shaker_gain * 0x7FFF) & 0x7FFF;
 
                 reload_effect(&devices[i], &devices[i].effect[1], &devices[i].effectId[1], false);
-                if((devices[i].effectId[1] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[1])) < 0) printf("Error (new): %s\n", SDL_GetError());
             }
 
             if(devices[i].supported & SDL_HAPTIC_SINE && devices[i].params.shaker_trigger && !oldParams[i].shaker_trigger)
