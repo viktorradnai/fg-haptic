@@ -1,0 +1,32 @@
+TODO (In some kind of importance order)
+---------------------------------------
+
+- Fix configuration dialog => update properties
+
+- Fix properties for yasim and jsbsim surface forces
+- Make axis mapping to work
+
+- Add save default or aircraft and per device options
+
+- Clean up the code, make it C++
+
+- Add different gains for surface force axis?
+
+- Add AoA setting to stick shaker => trigger
+- Check that stick shaker works with rumblepads!
+- Add stick pusher effect and its AoA setting
+- Any other way to detect stall? What real devices use?
+
+- Add speed dependent autocenter force to be used instead
+  of constant forces if they do not work properly
+
+- Add engine rpm shaker?
+
+- Add ground bumps?
+
+
+BUGS
+----
+- Not released yet so many many bugs lurk in the shadows..
+
+
