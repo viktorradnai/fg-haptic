@@ -10,7 +10,7 @@
 
    <output>
      <line_separator>newline</line_separator>
-     <var_separator>|</var_separator>
+     <var_separator></var_separator>
      <binary_mode>false</binary_mode>
 
 
@@ -18,113 +18,426 @@
 
      <chunk>
        <name>DeviceNumber_0</name>
-       <format>%d</format>
+       <format>%d|</format>
        <node>/haptic/device[0]/number</node>
      </chunk>
 
      <chunk>
        <name>Autocenter_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/autocenter</node>
      </chunk>
 
      <chunk>
        <name>Gain_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/gain</node>
      </chunk>
 
      <chunk>
        <name>Pilot_Gain_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/pilot/gain</node>
      </chunk>
 
      <chunk>
        <name>Pilot_X_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/pilot/x</node>
      </chunk>
 
      <chunk>
        <name>Pilot_Y_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/pilot/y</node>
      </chunk>
 
      <chunk>
        <name>Pilot_Z_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/pilot/z</node>
      </chunk>
 
      <chunk>
        <name>surface-force_Gain_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/surface-force/gain</node>
      </chunk>
 
      <chunk>
        <name>Surface_force_X_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/surface-force/x</node>
      </chunk>
 
      <chunk>
        <name>Surface_force_Y_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/surface-force/y</node>
      </chunk>
 
      <chunk>
        <name>Surface_force_Z_0</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/surface-force/z</node>
      </chunk>
 
      <chunk>
        <name>Stick_shaker_gain</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/stick-shaker/gain</node>
      </chunk>
 
      <chunk>
        <name>Stick_shaker_direction</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/stick-shaker/direction</node>
      </chunk>
 
      <chunk>
        <name>Stick_shaker_period</name>
-       <format>%.6f</format>
+       <format>%.6f|</format>
        <type>float</type>
        <node>/haptic/device[0]/stick-shaker/period</node>
      </chunk>
 
      <chunk>
        <name>Stick_shaker_trigger</name>
-       <format>%d</format>
+       <format>%d\r\n</format>
        <node>/haptic/device[0]/stick-shaker/trigger</node>
      </chunk>
 
 
     <!-- Device 1 -->
 
+     <chunk>
+       <name>DeviceNumber_1</name>
+       <format>%d|</format>
+       <node>/haptic/device[1]/number</node>
+     </chunk>
+
+     <chunk>
+       <name>Autocenter_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/autocenter</node>
+     </chunk>
+
+     <chunk>
+       <name>Gain_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Gain_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/pilot/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_X_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/pilot/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Y_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/pilot/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Z_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/pilot/z</node>
+     </chunk>
+
+     <chunk>
+       <name>surface-force_Gain_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/surface-force/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_X_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/surface-force/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Y_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/surface-force/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Z_1</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/surface-force/z</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_gain</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/stick-shaker/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_direction</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/stick-shaker/direction</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_period</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[1]/stick-shaker/period</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_trigger</name>
+       <format>%d\r\n</format>
+       <node>/haptic/device[1]/stick-shaker/trigger</node>
+     </chunk>
+
+
+
     <!-- Device 2 -->
 
+     <chunk>
+       <name>DeviceNumber_2</name>
+       <format>%d|</format>
+       <node>/haptic/device[2]/number</node>
+     </chunk>
+
+     <chunk>
+       <name>Autocenter_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/autocenter</node>
+     </chunk>
+
+     <chunk>
+       <name>Gain_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Gain_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/pilot/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_X_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/pilot/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Y_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/pilot/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Z_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/pilot/z</node>
+     </chunk>
+
+     <chunk>
+       <name>surface-force_Gain_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/surface-force/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_X_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/surface-force/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Y_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/surface-force/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Z_2</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/surface-force/z</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_gain</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/stick-shaker/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_direction</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/stick-shaker/direction</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_period</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[2]/stick-shaker/period</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_trigger</name>
+       <format>%d\r\n</format>
+       <node>/haptic/device[2]/stick-shaker/trigger</node>
+     </chunk>
+
+
+
     <!-- Device 3 -->
+
+     <chunk>
+       <name>DeviceNumber_3</name>
+       <format>%d|</format>
+       <node>/haptic/device[3]/number</node>
+     </chunk>
+
+     <chunk>
+       <name>Autocenter_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/autocenter</node>
+     </chunk>
+
+     <chunk>
+       <name>Gain_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Gain_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/pilot/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_X_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/pilot/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Y_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/pilot/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Pilot_Z_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/pilot/z</node>
+     </chunk>
+
+     <chunk>
+       <name>surface-force_Gain_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/surface-force/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_X_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/surface-force/x</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Y_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/surface-force/y</node>
+     </chunk>
+
+     <chunk>
+       <name>Surface_force_Z_3</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/surface-force/z</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_gain</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/stick-shaker/gain</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_direction</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/stick-shaker/direction</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_period</name>
+       <format>%.6f|</format>
+       <type>float</type>
+       <node>/haptic/device[3]/stick-shaker/period</node>
+     </chunk>
+
+     <chunk>
+       <name>Stick_shaker_trigger</name>
+       <format>%d</format>
+       <node>/haptic/device[3]/stick-shaker/trigger</node>
+     </chunk>
 
 
    </output>
