@@ -1,7 +1,7 @@
-TODO (In some kind of importance order)
----------------------------------------
+TODO (In some kind of importance order, X=Done)
+-----------------------------------------------
 
-- Fix configuration dialog => update properties
+X Fix configuration dialog => update properties
 
 - Fix properties for yasim and jsbsim surface forces
 - Make axis mapping to work
@@ -27,6 +27,10 @@ TODO (In some kind of importance order)
 
 BUGS
 ----
-- Not released yet so many many bugs lurk in the shadows..
+
+- With only control surface forces enabled, pushing or pulling stick 
+  to the limit causes forces to turn stick also sideways, even though
+  the force should be 0
 
 
+- Not released yet so many many more bugs lurk in the shadows..
