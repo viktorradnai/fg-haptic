@@ -25,6 +25,23 @@ dynamics models etc. and the force feedback effects.
 ff-protocol.xml is a generic IO protocol which fg-haptic 
 uses to communicate with flight Gear.
 
+This program has been tested with following devices by 
+the author:
+
+- Saitek Cyborg Evo Force (Linux)
+  * Does not support updating effects while running
+    which makes pilot/surface forces feel bad
+  * All effects supported
+  * Needs special kernel patch (for kernel 3.0.0)
+
+- Gametech "Twin USB Joystick" gamepad with rumble effect (Linux)
+  * Supports only stick shaker, if gain & strength are around 1.0
+  * Does not have axis (so 1?) but claims to have 2
+
+- Logitech Driving Force GT wheel (Linux)
+  * Supports only constant forces
+  * Really has 1 axis only, but calims to have 2
+
 
 BUILDING
 --------
@@ -65,4 +82,5 @@ fgfs --telnet=5401 --generic=socket,out,10,localhost,5402,tcp,ff-protocol
 
 Inside Flight Gear's menu (where?) you can find Force feedback options. 
 Tune them to your liking and fly!
+
 
