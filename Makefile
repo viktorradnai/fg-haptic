@@ -4,21 +4,13 @@ srcdir  = .
 
 CC      = gcc
 EXE	= 
-CFLAGS  = -g -O2 -I/usr/local/include/SDL -D_REENTRANT -DHAVE_OPENGL -std=c99
-LIBS	=  -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL -lpthread
+CFLAGS  = -g -O2 -I/usr/include/SDL2 -D_REENTRANT -DHAVE_OPENGL -std=c99
+LIBS	= -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL2 -lpthread -lm
 
 TARGETS = \
-	testhaptic$(EXE) \
-	testramp$(EXE) \
 	fg-haptic$(EXE)
 
 all: $(TARGETS)
-
-testhaptic$(EXE): $(srcdir)/testhaptic.c
-	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
-
-testramp$(EXE): $(srcdir)/testramp.c
-	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
 
 fg-haptic$(EXE): $(srcdir)/fg-haptic.c
 	$(CC) -o $@ $? $(CFLAGS) $(LIBS)

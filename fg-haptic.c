@@ -648,8 +648,8 @@ HapticPrintSupported(SDL_Haptic * haptic)
         printf("      constant\n");
     if (supported & SDL_HAPTIC_SINE)
         printf("      sine\n");
-    if (supported & SDL_HAPTIC_SQUARE)
-        printf("      square\n");
+/*    if (supported & SDL_HAPTIC_SQUARE)
+        printf("      square\n");*/
     if (supported & SDL_HAPTIC_TRIANGLE)
         printf("      triangle\n");
     if (supported & SDL_HAPTIC_SAWTOOTHUP)
