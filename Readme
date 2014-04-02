@@ -45,6 +45,9 @@ the author:
 
 BUILDING
 --------
+Required libraries:
+- libsdl2-dev
+
 fg-haptic should build by running:
 
 make fg-haptic
@@ -77,7 +80,7 @@ First run fg-haptic(.exe).
 
 Then launch flightgear with at least the following options:
 
-fgfs --telnet=5401 --generic=socket,out,10,localhost,5402,tcp,ff-protocol
+fgfs --telnet=5401 --generic=socket,out,20,localhost,5402,tcp,ff-protocol
 
 
 Inside Flight Gear's menu (where?) you can find Force feedback options. 

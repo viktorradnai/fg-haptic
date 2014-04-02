@@ -43,8 +43,12 @@ YASim at least:
 // 0) Constant force = pilot G and control surface loading
 // 1) Rumble = stick shaker
 #define TIMEOUT		400000
-#define EFFECTS		2
+#define EFFECTS		9
 #define AXES		3 	// Maximum axes supported
+
+#define CONST_X		0
+#define CONST_Y		1
+#define STICK_SHAKER	2
 
 const char axes[AXES] = {'x', 'y', 'z'};
 
@@ -103,6 +107,8 @@ typedef struct __hapticdevice {
 
 static hapticDevice *devices = NULL;
 
+
+#define CLAMP(x, l, h) ((x)>(h)?(h):((x)<(l)?(l):(x)))
 
 
 /*
@@ -191,7 +197,7 @@ void check_hacks(hapticDevice *device)
 void init_haptic(void)
 {
     /* Initialize the force feedbackness */
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
+    SDL_Init(/*SDL_INIT_VIDEO |*/ SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
 
     num_devices = SDL_NumHaptics();
     printf("%d Haptic devices detected.\n", num_devices);
@@ -241,7 +247,7 @@ void init_haptic(void)
           devices[i].numEffectsPlaying = SDL_HapticNumEffectsPlaying(devices[i].device);
 
           // Test device support
-          check_hacks(&devices[i]);
+          //check_hacks(&devices[i]);
 
         } else {
             printf("Unable to open haptic devices %d: %s\n", i, SDL_GetError());
@@ -272,13 +278,13 @@ void send_devices(void)
               // Currently support 3 axis only
               for(int x=0;x<devices[i].axes && x<AXES; x++) {
                   fgfswrite(sock, "set /haptic/device[%d]/pilot/%c %d", i, axes[x], 0);
-                  fgfswrite(sock, "set /haptic/device[%d]/surface-force/%c %d", i, axes[x], 0);
+                  fgfswrite(sock, "set /haptic/device[%d]/stick-force/%c %d", i, axes[x], 0);
               }
               fgfswrite(sock, "set /haptic/device[%d]/pilot/gain %f", i, 0.5);
-              fgfswrite(sock, "set /haptic/device[%d]/surface-force/gain %f", i, 0.5);
+              fgfswrite(sock, "set /haptic/device[%d]/stick-force/gain %f", i, 0.5);
 
-              fgfswrite(sock, "set /haptic/device[%d]/pilot/supported 1", i);
-              fgfswrite(sock, "set /haptic/device[%d]/surface-force/supported 1", i);
+              // fgfswrite(sock, "set /haptic/device[%d]/pilot/supported 1", i);
+              // fgfswrite(sock, "set /haptic/device[%d]/stick-force/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_SINE)
@@ -293,11 +299,11 @@ void send_devices(void)
 
           if(devices[i].supported & SDL_HAPTIC_GAIN) {
               fgfswrite(sock, "set /haptic/device[%d]/gain %d", i, 1);
-              fgfswrite(sock, "set /haptic/device[%d]/gain-supported 1", i);
+              // fgfswrite(sock, "set /haptic/device[%d]/gain-supported 1", i);
           }
           if(devices[i].supported & SDL_HAPTIC_AUTOCENTER) {
               fgfswrite(sock, "set /haptic/device[%d]/autocenter %d", i, 0);
-              fgfswrite(sock, "set /haptic/device[%d]/autocenter-supported 1", i);
+              // fgfswrite(sock, "set /haptic/device[%d]/autocenter-supported 1", i);
           }
     }
 }
@@ -306,46 +312,57 @@ void create_effects(void)
 {
     for(int i=0; i < num_devices; i++)
     {
-        // First effect is constant force
-        printf("Creating effects for device %d\n", i);
-        if (devices[i].supported & SDL_HAPTIC_CONSTANT)
+        memset(&devices[i].effect[0],0 , sizeof(SDL_HapticEffect)*EFFECTS);
+
+        if (devices[i].supported & SDL_HAPTIC_SINE)
         {
-            devices[i].effect[0].type = SDL_HAPTIC_CONSTANT;
+            devices[i].effect[STICK_SHAKER].type = SDL_HAPTIC_SINE;
+            devices[i].effect[STICK_SHAKER].periodic.direction.type = SDL_HAPTIC_POLAR;
+            devices[i].effect[STICK_SHAKER].periodic.direction.dir[0] = 0;
+            devices[i].effect[STICK_SHAKER].periodic.direction.dir[1] = 0;
+            devices[i].effect[STICK_SHAKER].periodic.direction.dir[2] = 0;
+            devices[i].effect[STICK_SHAKER].periodic.length = 5000;  // Default 10 seconds?
+            devices[i].effect[STICK_SHAKER].periodic.period = 100;    // 100 ms period = 10 Hz?
+            devices[i].effect[STICK_SHAKER].periodic.magnitude = 0x4000;
+            devices[i].effect[STICK_SHAKER].periodic.attack_length = 1000; // 1 sec fade in
+            devices[i].effect[STICK_SHAKER].periodic.fade_length = 1000; // 1 sec fade out
 
-            devices[i].effect[0].constant.direction.type = SDL_HAPTIC_CARTESIAN;
-            devices[i].effect[0].constant.direction.dir[0] = 1;
-            devices[i].effect[0].constant.direction.dir[1] = 0;
-            devices[i].effect[0].constant.direction.dir[2] = 0;
-
-            devices[i].effect[0].constant.length = 60000;  // By default constant fore is always applied
-            devices[i].effect[0].constant.level = 0x2000;
-
-            devices[i].effectId[0] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[0]);
-            if(devices[i].effectId[0] < 0) {
+            devices[i].effectId[STICK_SHAKER] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[STICK_SHAKER]);
+            if(devices[i].effectId[STICK_SHAKER] < 0) {
                 printf("UPLOADING EFFECT ERROR: %s\n", SDL_GetError());
                 abort_execution();
             }
         }
 
-        if (devices[i].supported & SDL_HAPTIC_SINE)
+        // First effect is constant force
+        printf("Creating effects for device %d\n", i);
+        if (devices[i].supported & SDL_HAPTIC_CONSTANT)
         {
-            devices[i].effect[1].type = SDL_HAPTIC_SINE;
+            devices[i].effect[CONST_X].type = SDL_HAPTIC_CONSTANT;
+            devices[i].effect[CONST_X].constant.direction.type = SDL_HAPTIC_CARTESIAN;
+            devices[i].effect[CONST_X].constant.direction.dir[0] = 0x1000;
+            devices[i].effect[CONST_X].constant.direction.dir[1] = 0;
+            devices[i].effect[CONST_X].constant.direction.dir[2] = 0;
+            devices[i].effect[CONST_X].constant.length = 60000;  // By default constant fore is always applied
+            devices[i].effect[CONST_X].constant.level = 0x1000;
 
-            devices[i].effect[1].periodic.direction.type = SDL_HAPTIC_POLAR;
-            devices[i].effect[1].periodic.direction.dir[0] = 0;
-            devices[i].effect[1].periodic.direction.dir[1] = 0;
-            devices[i].effect[1].periodic.direction.dir[2] = 0;
+            devices[i].effectId[CONST_X] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_X]);
+            if(devices[i].effectId[CONST_X] < 0) {
+                printf("UPLOADING CONST_X EFFECT ERROR: %s\n", SDL_GetError());
+                abort_execution();
+            }
 
-            devices[i].effect[1].periodic.length = 5000;  // Default 10 seconds?
-            devices[i].effect[1].periodic.period = 1000;    // 100 ms period = 10 Hz?
-            devices[i].effect[1].periodic.magnitude = 0x4000;
+            devices[i].effect[CONST_Y].type = SDL_HAPTIC_CONSTANT;
+            devices[i].effect[CONST_Y].constant.direction.type = SDL_HAPTIC_CARTESIAN;
+            devices[i].effect[CONST_Y].constant.direction.dir[0] = 0;
+            devices[i].effect[CONST_Y].constant.direction.dir[1] = -0x1000;
+            devices[i].effect[CONST_Y].constant.direction.dir[2] = 0;
+            devices[i].effect[CONST_Y].constant.length = 60000;  // By default constant fore is always applied
+            devices[i].effect[CONST_Y].constant.level = 0x1000;
 
-            devices[i].effect[1].periodic.attack_length = 1000; // 1 sec fade in
-            devices[i].effect[1].periodic.fade_length = 1000; // 1 sec fade out
-
-            devices[i].effectId[1] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[1]);
-            if(devices[i].effectId[1] < 0) {
-                printf("UPLOADING EFFECT ERROR: %s\n", SDL_GetError());
+            devices[i].effectId[CONST_Y] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_Y]);
+            if(devices[i].effectId[CONST_Y] < 0) {
+                printf("UPLOADING CONST_Y EFFECT ERROR: %s\n", SDL_GetError());
                 abort_execution();
             }
         }
@@ -357,14 +374,19 @@ void reload_effect(hapticDevice *device, SDL_HapticEffect *effect, int *effectId
 {
     if(!device->device || !device->open) return;
 
-    // printf("Updating device %d, effect %d\n", device->num, *effectId);
+    if(SDL_HapticUpdateEffect(device->device, *effectId, effect) < 0) printf("Update error: %s\n", SDL_GetError());
+    if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Run error: %s\n", SDL_GetError());
+
+  // TODO: Obsolete code below
+#if 0
+    //printf("Updating device %d, effect %d\n", device->num, *effectId);
 
     // If we can update effects, either live or not, do it!
     if(device->hacks.update)
     {
         if(!device->hacks.liveUpdate) if(SDL_HapticStopEffect(device->device, *effectId) < 0) printf("Error: %s\n", SDL_GetError());
-        if(SDL_HapticUpdateEffect(device->device, *effectId, effect) < 0) printf("Error: %s\n", SDL_GetError());
-        if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Error: %s\n", SDL_GetError());
+        if(SDL_HapticUpdateEffect(device->device, *effectId, effect) < 0) printf("Update error: %s\n", SDL_GetError());
+        if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Run error: %s\n", SDL_GetError());
 
     // If we can update, and can run one more effect simultaneously
     }
@@ -383,44 +405,36 @@ void reload_effect(hapticDevice *device, SDL_HapticEffect *effect, int *effectId
         if(((*effectId) = SDL_HapticNewEffect(device->device, effect)) < 0) printf("Error: %s\n", SDL_GetError());
         if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Error: %s\n", SDL_GetError());
     }
+#endif
 }
 
 
 void read_fg(void)
 {
-    int num, read;
+    int reconf, read;
     effectParams params;
     const char *p;
 
     p = fgfsread(client_sock, TIMEOUT);
     if(!p) return;  // Null pointer, read failed
 
-    do {
+    memset(&params, 0, sizeof(effectParams));
 
-        // Divide the buffer into chunks
-        read = sscanf(p, "%d|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%f|%d", &num, &params.autocenter, &params.gain, &params.pilot_gain,
-                   &params.pilot[0], &params.pilot[1], &params.pilot[2], &params.surface_gain, &params.surface[0], &params.surface[1],
-                   &params.surface[2], &params.shaker_gain, &params.shaker_dir, &params.shaker_period, &params.shaker_trigger);
+    //printf("%s\n", p);
 
-        if(read != 15) {
-            printf("Error reading generic I/O!\n");
-            return;
-        }
+    // Divide the buffer into chunks
+    read = sscanf(p, "%d|%f|%f|%f|%f|%f|%f|%d", &reconf,
+                   &params.pilot[0], &params.pilot[1], &params.pilot[2],
+		   &params.surface[0], &params.surface[1], &params.surface[2],
+		   &params.shaker_trigger);
 
-        // Decrease num to match the real device. Num if FG starts from 1
-        // to work around empty properties being read as 0.
-        num--;
+    if(read != 8) {
+        printf("Error reading generic I/O!\n");
+        return;
+    }
 
-        if(num >= 0 && num < num_devices)
-        {
-            // Do it the easy way...
-            memcpy(&devices[num].params, &params, sizeof(effectParams));
-        }
-
-        // Find beginning of the next line
-        p = strchr(p, '\n');
-        if(p) p++;
-    } while(p && read == 15);  // Loop as long as there is lines
+    // Do it the easy way...
+    memcpy(&devices[0].params, &params, sizeof(effectParams));
 }
 
 
@@ -512,8 +526,10 @@ main(int argc, char **argv)
     clientpoll.fd = client_sock;
     clientpoll.events = POLLIN | POLLPRI; // Dunno about these..
     clientpoll.revents = 0;
-    while(!poll(&clientpoll, 1, 0))  // Loop as long as the connection is alive
+    while(1)  // Loop as long as the connection is alive
     {
+
+        poll(&clientpoll, 1, 0);
 
         // Back up old parameters
         for(int i=0; i < num_devices; i++)
@@ -522,40 +538,46 @@ main(int argc, char **argv)
         // Read new parameters
         read_fg();
 
-
         // If parameters have changed, apply them
         for(int i=0; i < num_devices; i++)
         {
             if(!devices[i].device || !devices[i].open) continue;  // Break if device is not opened correctly
 
-            // Check for parameter changes
-            // Pilot G force changed?
-            if(devices[i].supported & SDL_HAPTIC_CONSTANT && (devices[i].params.pilot[0] != oldParams[i].pilot[0] || devices[i].params.pilot[1] != oldParams[i].pilot[1] ||
-               devices[i].params.pilot[2] != oldParams[i].pilot[2] || devices[i].params.pilot_gain != oldParams[i].pilot_gain ||
-               devices[i].params.surface[0] != oldParams[i].surface[0] || devices[i].params.surface[1] != oldParams[i].surface[1] || devices[i].params.surface[2] != oldParams[i].surface[2] ||
-               devices[i].params.surface_gain != oldParams[i].surface_gain))
+            // Constant forces (stick forces, pilot G forces
+            // TODO: Pilot G forces
+	    if(devices[i].supported & SDL_HAPTIC_CONSTANT)
             {
-                float x = devices[i].params.pilot_gain*devices[i].params.pilot[0] + devices[i].params.surface_gain*devices[i].params.surface[0];
-                float y = devices[i].params.pilot_gain*devices[i].params.pilot[1] + devices[i].params.surface_gain*devices[i].params.surface[1];
-                float z = devices[i].params.pilot_gain*devices[i].params.pilot[2] + devices[i].params.surface_gain*devices[i].params.surface[2];
+//                float x = devices[i].params.pilot_gain*devices[i].params.pilot[0] + devices[i].params.surface_gain*devices[i].params.surface[0];
+//                float y = devices[i].params.pilot_gain*devices[i].params.pilot[1] + devices[i].params.surface_gain*devices[i].params.surface[1];
+//                float z = devices[i].params.pilot_gain*devices[i].params.pilot[2] + devices[i].params.surface_gain*devices[i].params.surface[2];
 
-                float level = 0.0;
-                if(devices[i].axes == 1) { level = x; y=z=0.0; }
-                else if(devices[i].axes == 2) { level = sqrt(x*x + y*y); z = 0.0; }
-                else if(devices[i].axes == 3) level = sqrt(x*x + y*y + z*z);
+                float x = devices[i].params.surface[0];
+                float y = devices[i].params.surface[1];
+                float z = devices[i].params.surface[2];
+
+                x = CLAMP(x, -1.0, 1.0) * 32760.0;
+                y = CLAMP(y, -1.0, 1.0) * 32760.0;
+                z = CLAMP(z, -1.0, 1.0) * 32760.0;
 
                 // Normalize direction vector so we don't saturate it
-                devices[i].effect[0].constant.direction.dir[0] = (signed short)(x/level * 0x7FFF);
-                devices[i].effect[0].constant.direction.dir[1] = (signed short)(y/level * 0x7FFF);
-                devices[i].effect[0].constant.direction.dir[2] = (signed short)(z/level * 0x7FFF);
-                devices[i].effect[0].constant.level = (unsigned short)(level * 0x7FFF) & 0x7FFF;
+                devices[i].effect[CONST_X].constant.level = (signed short)(x);
+                devices[i].effect[CONST_Y].constant.level = (signed short)(y);
 
-                printf("%d:\t\t(%d\t%d)\n", devices[i].effect[0].constant.level, devices[i].effect[0].constant.direction.dir[0], devices[i].effect[0].constant.direction.dir[1]);
+		printf("X: %.6f  Y: %.6f\n", x, y);
+		//printf("X: %6d  Y: %6d\n", devices[i].effect[CONST_X].constant.level, devices[i].effect[CONST_Y].constant.level);
 
-                // If updatingis supported, do it
-                reload_effect(&devices[i], &devices[i].effect[0], &devices[i].effectId[0], true);
+                // If updating is supported, do it
+                reload_effect(&devices[i], &devices[i].effect[CONST_X], &devices[i].effectId[CONST_X], true);
+                reload_effect(&devices[i], &devices[i].effect[CONST_Y], &devices[i].effectId[CONST_Y], true);
             }
 
+            // Stick shaker trigger
+            if(devices[i].supported & SDL_HAPTIC_SINE && devices[i].params.shaker_trigger && !oldParams[i].shaker_trigger)
+            {
+                //printf("Rumble triggered! %u %d\n", (unsigned int)devices[i].device, devices[i].effectId[1]);
+                reload_effect(&devices[i], &devices[i].effect[STICK_SHAKER], &devices[i].effectId[STICK_SHAKER], true);
+            }
+#if 0
             if(devices[i].supported & SDL_HAPTIC_SINE && (devices[i].params.shaker_dir != oldParams[i].shaker_dir ||
                devices[i].params.shaker_gain != oldParams[i].shaker_gain || devices[i].params.shaker_period != oldParams[i].shaker_period))
             {
@@ -569,17 +591,9 @@ main(int argc, char **argv)
                 reload_effect(&devices[i], &devices[i].effect[1], &devices[i].effectId[1], false);
             }
 
-            if(devices[i].supported & SDL_HAPTIC_SINE && devices[i].params.shaker_trigger && !oldParams[i].shaker_trigger)
-            {
-                // printf("Rumble triggered! %u %d\n", (unsigned int)devices[i].device, devices[i].effectId[1]);
-                reload_effect(&devices[i], &devices[i].effect[1], &devices[i].effectId[1], true);
-
-                // The following line seems to cause crash, so using the reload_effect way!
-                // if(SDL_HapticRunEffect(devices[i].device, devices[i].effectId[1], 1) < 0) printf("Error3: %s\n", SDL_GetError());
-            }
-
             if(devices[i].supported & SDL_HAPTIC_AUTOCENTER && devices[i].params.autocenter != oldParams[i].autocenter) SDL_HapticSetAutocenter(devices[i].device, devices[i].params.autocenter * 100);
             if(devices[i].supported & SDL_HAPTIC_GAIN && devices[i].params.gain != oldParams[i].gain) SDL_HapticSetGain(devices[i].device, devices[i].params.gain * 100);
+#endif
         }
     }
 
