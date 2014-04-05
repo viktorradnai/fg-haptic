@@ -17,8 +17,7 @@
      <chunk>
        <name>Reconf_request</name>
        <format>%d</format>
-       <type>float</type>
-       <node>/haptic/pilot/gain</node>
+       <node>/haptic/reconfigure</node>
      </chunk>
 
      <chunk>
