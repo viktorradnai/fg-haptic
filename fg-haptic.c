@@ -54,14 +54,6 @@ void fgfsflush(int sock);
 // Socket used to communicate with flightgear
 int telnet_sock, server_sock, client_sock;
 
-
-// Device supports (workarounds...)
-typedef struct __deviceHacks {
-    bool liveUpdate;  // Support updating while effect is running (BEST CASE)?
-    bool update;      // Support update at all... bad case if not
-} deviceHacks;
-
-
 // Effect struct definitions, used to store parameters
 typedef struct __effectParams {
     float pilot[AXES];
@@ -79,8 +71,6 @@ typedef struct __hapticdevice {
     unsigned int axes;		// Count of axes
     unsigned int numEffects, numEffectsPlaying;
     bool open;
-
-    deviceHacks hacks;
 
     SDL_HapticEffect effect[EFFECTS];
     int effectId[EFFECTS];
@@ -115,83 +105,6 @@ bool reconf_request = false;
  */
 static void abort_execution(void);
 static void HapticPrintSupported(SDL_Haptic * haptic);
-
-void check_hacks(hapticDevice *device)
-{
-    // Testing with sine rumble, since it is best supported
-    if (device->supported & SDL_HAPTIC_SINE)
-    {
-        device->effect[0].type = SDL_HAPTIC_SINE;
-        device->effect[0].periodic.direction.type = SDL_HAPTIC_POLAR;
-        device->effect[0].periodic.direction.dir[0] = 0;
-        device->effect[0].periodic.direction.dir[1] = 0;
-        device->effect[0].periodic.direction.dir[2] = 0;
-
-        device->effect[0].periodic.length = 1000;
-        device->effect[0].periodic.period = 1000;
-        device->effect[0].periodic.magnitude = 0x0001; // Should not feel it when testing...
-
-        device->effect[0].periodic.attack_length = 500; // 1 sec fade in
-        device->effect[0].periodic.fade_length = 500; // 1 sec fade out
-
-        device->effectId[0] = SDL_HapticNewEffect(device->device, &device->effect[0]);
-        if(device->effectId[0] < 0) {
-            printf("UPLOADING EFFECT ERROR: %s\n", SDL_GetError());
-            abort_execution();
-        }
-
-        // Try to update when effect is not running
-        if(SDL_HapticUpdateEffect(device->device, device->effectId[0], &device->effect[0]) < 0) device->hacks.update = false;
-        else device->hacks.update=true;
-
-        // Now run it and try live update
-        SDL_HapticRunEffect(device->device, device->effectId[0], 1);
-        if(SDL_HapticUpdateEffect(device->device, device->effectId[0], &device->effect[0]) < 0) device->hacks.liveUpdate = false;
-        else device->hacks.liveUpdate = true;
-        SDL_HapticDestroyEffect(device->device, device->effectId[0]);
-
-        printf("Device supports update: %d, liveUpdate: %d\n", device->hacks.update, device->hacks.liveUpdate);
-
-        // Empty the effect struct
-        memset(&device->effect[0], 0, sizeof(SDL_HapticEffect));
-        device->effectId[0] = 0;
-    }
-    else if (device->supported & SDL_HAPTIC_CONSTANT)  // Let's try with constant if sine is not available...
-    {
-        device->effect[0].type = SDL_HAPTIC_CONSTANT;
-
-        device->effect[0].constant.direction.type = SDL_HAPTIC_CARTESIAN;
-        device->effect[0].constant.direction.dir[0] = 0;
-        device->effect[0].constant.direction.dir[1] = 0;
-        device->effect[0].constant.direction.dir[2] = 0;
-
-        device->effect[0].constant.length = 1000;  // By default constant fore is always applied
-        device->effect[0].constant.level = 0x0001;
-
-        device->effectId[0] = SDL_HapticNewEffect(device->device, &device->effect[0]);
-        if(device->effectId[0] < 0) {
-            printf("UPLOADING EFFECT ERROR: %s\n", SDL_GetError());
-            abort_execution();
-        }
-
-        // Try to update when effect is not running
-        if(SDL_HapticUpdateEffect(device->device, device->effectId[0], &device->effect[0]) < 0) device->hacks.update = false;
-        else device->hacks.update=true;
-
-        // Now run it and try live update
-        SDL_HapticRunEffect(device->device, device->effectId[0], 1);
-        if(SDL_HapticUpdateEffect(device->device, device->effectId[0], &device->effect[0]) < 0) device->hacks.liveUpdate = false;
-        else device->hacks.liveUpdate = true;
-        SDL_HapticDestroyEffect(device->device, device->effectId[0]);
-
-        printf("Device supports update: %d, liveUpdate: %d\n", device->hacks.update, device->hacks.liveUpdate);
-
-        // Empty the effect struct
-        memset(&device->effect[0], 0, sizeof(SDL_HapticEffect));
-        device->effectId[0] = 0;
-    }
-}
-
 
 void init_haptic(void)
 {
@@ -257,9 +170,6 @@ void init_haptic(void)
           devices[i].stick_gain = 1.0;
           devices[i].shaker_gain = 1.0;
           devices[i].shaker_period = 100.0;
-
-          // Test device support
-          //check_hacks(&devices[i]);
 
         } else {
             printf("Unable to open haptic devices %d: %s\n", i, SDL_GetError());
@@ -455,36 +365,6 @@ void reload_effect(hapticDevice *device, SDL_HapticEffect *effect, int *effectId
 
     if(SDL_HapticUpdateEffect(device->device, *effectId, effect) < 0) printf("Update error: %s\n", SDL_GetError());
     if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Run error: %s\n", SDL_GetError());
-
-  // TODO: Obsolete code below
-#if 0
-    //printf("Updating device %d, effect %d\n", device->num, *effectId);
-
-    // If we can update effects, either live or not, do it!
-    if(device->hacks.update)
-    {
-        if(!device->hacks.liveUpdate) if(SDL_HapticStopEffect(device->device, *effectId) < 0) printf("Error: %s\n", SDL_GetError());
-        if(SDL_HapticUpdateEffect(device->device, *effectId, effect) < 0) printf("Update error: %s\n", SDL_GetError());
-        if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Run error: %s\n", SDL_GetError());
-
-    // If we can update, and can run one more effect simultaneously
-    }
-    else if(run && device->numEffects > EFFECTS && device->numEffectsPlaying > EFFECTS)
-    {
-        int oldId = *effectId;
-        if(((*effectId) = SDL_HapticNewEffect(device->device, effect)) < 0) printf("Error: %s\n", SDL_GetError());
-        if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Error: %s\n", SDL_GetError());
-        SDL_HapticDestroyEffect(device->device, oldId);
-
-    // Otherwise must first delete, then create new (and launch it)
-    }
-    else
-    {
-        SDL_HapticDestroyEffect(device->device, *effectId);
-        if(((*effectId) = SDL_HapticNewEffect(device->device, effect)) < 0) printf("Error: %s\n", SDL_GetError());
-        if(run) if(SDL_HapticRunEffect(device->device, *effectId, 1) < 0) printf("Error: %s\n", SDL_GetError());
-    }
-#endif
 }
 
 
