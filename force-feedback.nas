@@ -1,6 +1,19 @@
 # Variables, need to make controllable
 var update_interval = 0.05;
 
+# Defaults constants, will be overwritten in init
+var aileron_gain = 0.1;
+var elevator_gain = 0.1;
+var g_force_gain = 0.003;
+var rudder_gain = 0.1;
+var slip_gain = 1.0;
+var stall_AoA = 18.0*3.14159/180.0;
+var pusher_start_AoA = 900.0*3.14159/180.0;
+var pusher_working_angle = 900.0*3.14159/180.0;
+var wing_shadow_AoA = 900.0*3.14159/180.0;
+var wing_shadow_angle = 900.0*3.14159/180.0;
+var stick_shaker_AoA = 16.0 * 3.14159/180.0;
+
 
 ###
 # Update different forces for device in <path>
@@ -12,7 +25,7 @@ var update_pilot_g = func(path) {
   if(pilot_path == nil) return;  # Bail out if pilot forces are not supported
 
   # If gain is set to 0, effect is disabled so don't update
-  # if(pilot_path.getNode("gain").getValue() == 0) return;
+  #if(pilot_path.getNode("gain").getValue() < 0.001) return;
 
   var pilot_x = getprop("/accelerations/pilot/x-accel-fps_sec");  # Forwards, positive towards back
   var pilot_y = getprop("/accelerations/pilot/y-accel-fps_sec");  # Sideways, positive to right
@@ -47,7 +60,7 @@ var update_stick_forces = func(path) {
   var stick_force_path = path.getNode("stick-force");
   if(stick_force_path == nil) return;
 
-  # if(stick_force_path.getNode("gain").getValue() == 0) return;
+  #if(stick_force_path.getNode("gain").getValue() < 0.001) return;
 
   var airspeed = getprop("/velocities/airspeed-kt");
   var aileron_angle = getprop("/fdm/jsbsim/fcs/left-aileron-pos-rad");
@@ -58,19 +71,6 @@ var update_stick_forces = func(path) {
   var density = getprop("/environment/density-slugft3");
   var g_force = getprop("/accelerations/pilot/z-accel-fps_sec") + 32.174;
 
-  # TODO: Constants, move to init
-  var aileron_gain = 0.1; #getprop("TBD");
-  var elevator_gain = 0.1; #getprop("TBD");
-  var g_force_gain = 0.003; #getprop("TBD");
-  var rudder_gain = 0.1; #getprop("TBD");
-  var slip_gain = 1.0; #getprop("TBD");
-  var stall_AoA = 18.0*3.14159/180.0; #getprop("TBD");
-  var pusher_start_AoA = 900.0*3.14159/180.0; #getprop("TBD");
-  var pusher_working_angle = 900.0*3.14159/180.0; #getprop("TBD");
-  var wing_shadow_AoA = 900.0*3.14159/180.0; #getprop("TBD");
-  var wing_shadow_angle = 900.0*3.14159/180.0; #getprop("TBD");
-  var stick_shaker_AoA = 16.0 * 3.14159/180.0; #getprop("TND");
-  
   # TODO: Check whether AoA should be + or -!
   elevator_angle = elevator_angle + AoA;
   rudder_angle = rudder_angle - slip_angle;
@@ -158,6 +158,23 @@ var update_forces = func {
 ###
 # Main initialization
 _setlistener("/sim/signals/nasal-dir-initialized", func {
+
+  # TODO: Update constants from aircraft setup
+  #aileron_gain = getprop("TBD");
+  #elevator_gain = getprop("TBD");
+  #g_force_gain = getprop("TBD");
+  #rudder_gain = getprop("TBD");
+  #slip_gain = getprop("TBD");
+  #stall_AoA = getprop("TBD");
+  #pusher_start_AoA = getprop("TBD");
+  #pusher_working_angle = getprop("TBD");
+  #wing_shadow_AoA = getprop("TBD");
+  #wing_shadow_angle = getprop("TBD");
+  #stick_shaker_AoA = getprop("TND");
+
+  # Add dialog to menu
+  #gui.menubind("Force feedback", "dialogs.force-feedback.open()");
+
   # Set timer for main loop
   settimer(update_forces, update_interval);
 });

@@ -4,7 +4,7 @@ srcdir  = .
 
 CC      = gcc
 EXE	= 
-CFLAGS  = -g -O2 -I/usr/include/SDL2 -D_REENTRANT -DHAVE_OPENGL -std=c99
+CFLAGS  = -g -O2 -I/usr/include/SDL2 -D_REENTRANT -DHAVE_OPENGL -std=c99 -D_POSIX_C_SOURCE -Wall
 LIBS	= -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL2 -lpthread -lm
 
 TARGETS = \

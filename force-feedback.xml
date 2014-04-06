@@ -2,7 +2,7 @@
 
 <PropertyList>
   <name>force-feedback</name>
-  <!-- <dialog-name>force-feedback</dialog-name> -->
+  <dialog-name>force-feedback</dialog-name>
 
   <!-- <padding>20</padding> -->
   <layout>vbox</layout>
@@ -240,7 +240,7 @@
               <value>Aileron</value>
               <value>-Aileron</value>
               <value>Elevator</value>
-              <value>-Elevator</value>
+              <value>-Elevator</value> 
               <value>Rudder</value>
               <value>-Rudder</value>
               <binding>
@@ -515,6 +515,20 @@
 
   <hrule><stretch>1</stretch></hrule>
 
+  <!-- Apply button -->
+  <group>
+    <layout>hbox</layout>
+
+    <empty><stretch>1</stretch></empty>
+
+    <button>
+      <legend>Apply</legend>
+      <binding>
+        <command>nasal</command>
+        <script>reconfigure();</script>
+      </binding>
+    </button>
+  </group>
 
   <!-- Close button -->
   <group>
@@ -548,6 +562,24 @@
         return nil;
       };
 
+      # Stick and pilot axis mapping
+      var stick_axis = { None:-1, Aileron:0, Elevator:1, Rudder:2 };
+      var pilot_axis = { None:-1, X:0, Y:1, Z:2 };
+
+      var getAxisNumber = func(node, values) {
+        var selected = getprop(node);
+        foreach (var key; keys(values)) {
+          if(selected == key) return values[key];
+        }
+        return -1;
+      };
+
+      var getAxisName = func(selected, values) {
+        foreach (var key; keys(values)) {
+          if(selected == values[key]) return key;
+        }
+        return "None";
+      };
 
       var applyChanges = func {
         var hapticNode = props.globals.getNode("/haptic", 1);
@@ -563,13 +595,19 @@
             setprop("/haptic/device[" ~ i ~ "]/autocenter", getprop("/sim/gui/dialogs/force-feedback/autocenter"));
             setprop("/haptic/device[" ~ i ~ "]/gain", getprop("/sim/gui/dialogs/force-feedback/gain"));
             setprop("/haptic/device[" ~ i ~ "]/pilot/gain", getprop("/sim/gui/dialogs/force-feedback/pilot-g-strength"));
-            setprop("/haptic/device[" ~ i ~ "]/pilot/axis-x", getprop("/sim/gui/dialogs/force-feedback/pilot-g-x"));
-            setprop("/haptic/device[" ~ i ~ "]/pilot/axis-y", getprop("/sim/gui/dialogs/force-feedback/pilot-g-y"));
-            setprop("/haptic/device[" ~ i ~ "]/pilot/axis-z", getprop("/sim/gui/dialogs/force-feedback/pilot-g-z"));
-            setprop("/haptic/device[" ~ i ~ "]/surface-force/gain", getprop("/sim/gui/dialogs/force-feedback/control-surface-strength"));
-            setprop("/haptic/device[" ~ i ~ "]/surface-force/axis-x", getprop("/sim/gui/dialogs/force-feedback/control-surface-x"));
-            setprop("/haptic/device[" ~ i ~ "]/surface-force/axis-y", getprop("/sim/gui/dialogs/force-feedback/control-surface-y"));
-            setprop("/haptic/device[" ~ i ~ "]/surface-force/axis-z", getprop("/sim/gui/dialogs/force-feedback/control-surface-z"));
+            setprop("/haptic/device[" ~ i ~ "]/pilot/x", getAxisNumber("/sim/gui/dialogs/force-feedback/pilot-g-x", pilot_axis));
+            setprop("/haptic/device[" ~ i ~ "]/pilot/y", getAxisNumber("/sim/gui/dialogs/force-feedback/pilot-g-y", pilot_axis));
+            setprop("/haptic/device[" ~ i ~ "]/pilot/z", getAxisNumber("/sim/gui/dialogs/force-feedback/pilot-g-z", pilot_axis));
+            #setprop("/haptic/device[" ~ i ~ "]/pilot/x", getprop("/sim/gui/dialogs/force-feedback/pilot-g-x"));
+            #setprop("/haptic/device[" ~ i ~ "]/pilot/y", getprop("/sim/gui/dialogs/force-feedback/pilot-g-y"));
+            #setprop("/haptic/device[" ~ i ~ "]/pilot/z", getprop("/sim/gui/dialogs/force-feedback/pilot-g-z"));
+            setprop("/haptic/device[" ~ i ~ "]/stick-force/gain", getprop("/sim/gui/dialogs/force-feedback/control-surface-strength"));
+            setprop("/haptic/device[" ~ i ~ "]/stick-force/x", getAxisNumber("/sim/gui/dialogs/force-feedback/control-surface-x", stick_axis));
+            setprop("/haptic/device[" ~ i ~ "]/stick-force/y", getAxisNumber("/sim/gui/dialogs/force-feedback/control-surface-y", stick_axis));
+            setprop("/haptic/device[" ~ i ~ "]/stick-force/z", getAxisNumber("/sim/gui/dialogs/force-feedback/control-surface-z", stick_axis));
+            #setprop("/haptic/device[" ~ i ~ "]/stick-force/x", getprop("/sim/gui/dialogs/force-feedback/control-surface-x"));
+            #setprop("/haptic/device[" ~ i ~ "]/stick-force/y", getprop("/sim/gui/dialogs/force-feedback/control-surface-y"));
+            #setprop("/haptic/device[" ~ i ~ "]/stick-force/z", getprop("/sim/gui/dialogs/force-feedback/control-surface-z"));
             setprop("/haptic/device[" ~ i ~ "]/stick-shaker/gain", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-strength"));
             setprop("/haptic/device[" ~ i ~ "]/stick-shaker/direction", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-direction"));
             setprop("/haptic/device[" ~ i ~ "]/stick-shaker/period", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-period"));
@@ -580,6 +618,10 @@
             return;
           }
         }
+      };
+
+      var reconfigure = func {
+        setprop("/haptic/reconfigure", 1);
       };
 
       # Fill dialog params with selected device
@@ -615,20 +657,20 @@
         setprop("/sim/gui/dialogs/force-feedback/pilot-g-enable", "true");
 
         # Then change values
-        effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/axis-x");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/x");
         if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/pilot-g-x", "-Y");
-        else setprop("/sim/gui/dialogs/force-feedback/pilot-g-x", effect);
+        else setprop("/sim/gui/dialogs/force-feedback/pilot-g-x", getAxisName(effect, pilot_axis));
 
         if(getprop("/haptic/device[" ~ dev ~ "]/axes") > 1) {
-          effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/axis-y");
+          effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/y");
           if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/pilot-g-y", "X");
-          else setprop("/sim/gui/dialogs/force-feedback/pilot-g-y", effect);
+          else setprop("/sim/gui/dialogs/force-feedback/pilot-g-y", getAxisName(effect, pilot_axis));
         } else setprop("/sim/gui/dialogs/force-feedback/pilot-g-y", "None");
 
         if(getprop("/haptic/device[" ~ dev ~ "]/axes") > 2) {
-          effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/axis-z");
+          effect = getprop("/haptic/device[" ~ dev ~ "]/pilot/z");
           if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/pilot-g-z", "Z");
-          else setprop("/sim/gui/dialogs/force-feedback/pilot-g-z", effect);
+          else setprop("/sim/gui/dialogs/force-feedback/pilot-g-z", getAxisName(effect, pilot_axis));
         } else setprop("/sim/gui/dialogs/force-feedback/pilot-g-z", "None");
 
 
@@ -644,28 +686,28 @@
         # CONTROL SURFACE FORCES
         setprop("/sim/gui/dialogs/force-feedback/control-surface-enable", "true");
 
-        effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/gain");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/stick-force/gain");
         if(effect == nil) effect = 0;
         setprop("/sim/gui/dialogs/force-feedback/control-surface-strength", effect);
 
         # Axis bindings
-        effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/axis-x");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/stick-force/x");
         if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/control-surface-x", "-Aileron");
-        else setprop("/sim/gui/dialogs/force-feedback/control-surface-x", effect);
+        else setprop("/sim/gui/dialogs/force-feedback/control-surface-x", getAxisName(effect, stick_axis));
 
         if(getprop("/haptic/device[" ~ dev ~ "]/axes") > 1) {
-          effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/axis-y");
+          effect = getprop("/haptic/device[" ~ dev ~ "]/stick-force/y");
           if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/control-surface-y", "-Elevator");
-          else setprop("/sim/gui/dialogs/force-feedback/control-surface-y", effect);
+          else setprop("/sim/gui/dialogs/force-feedback/control-surface-y", getAxisName(effect, stick_axis));
         } else setprop("/sim/gui/dialogs/force-feedback/control-surface-y", "None");
 
         if(getprop("/haptic/device[" ~ dev ~ "]/axes") > 2) {
-          effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/axis-z");
+          effect = getprop("/haptic/device[" ~ dev ~ "]/stick-force/z");
           if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/control-surface-z", "Rudder");
-          else setprop("/sim/gui/dialogs/force-feedback/control-surface-z", effect);
+          else setprop("/sim/gui/dialogs/force-feedback/control-surface-z", getAxisName(effect, stick_axis));
         } else setprop("/sim/gui/dialogs/force-feedback/control-surface-z", "None");
 
-        effect = getprop("/haptic/device[" ~ dev ~ "]/surface-force/supported");
+        effect = getprop("/haptic/device[" ~ dev ~ "]/stick-force/supported");
         if((effect == nil) or (effect == 0)) setprop("/sim/gui/dialogs/force-feedback/control-surface-enable", "false");
         else setprop("/sim/gui/dialogs/force-feedback/control-surface-enable", "true");
 

@@ -11,11 +11,13 @@
 #include <math.h>
 #include <sys/poll.h>
 
+#include <signal.h>
+
 /* From fgfsclient */
 #include <errno.h>
 #include <unistd.h>
-#include <sys/time.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -104,8 +106,8 @@ bool reconf_request = false;
 /*
  * prototypes
  */
-static void abort_execution(void);
-static void HapticPrintSupported(SDL_Haptic * haptic);
+void abort_execution(int signal);
+void HapticPrintSupported(SDL_Haptic * haptic);
 
 void init_haptic(void)
 {
@@ -118,7 +120,7 @@ void init_haptic(void)
     devices = (hapticDevice*)malloc(num_devices * sizeof(hapticDevice));
     if(!devices) {
         printf("Fatal error: Could not allocate memory for devices!\n");
-        abort_execution();
+        abort_execution(-1);
     }
 
     // Zero
@@ -209,6 +211,8 @@ void send_devices(void)
               }
               fgfswrite(telnet_sock, "set /haptic/device[%d]/pilot/gain %f", i, devices[i].pilot_gain);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-force/gain %f", i, devices[i].stick_gain);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-force/supported 1", i);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/pilot/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_SINE)
@@ -218,14 +222,16 @@ void send_devices(void)
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/period %f", i, devices[i].shaker_period);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/gain %f", i, devices[i].shaker_gain);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/trigger 0", i);
-              // fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/supported 1", i);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_GAIN) {
               fgfswrite(telnet_sock, "set /haptic/device[%d]/gain %f", i, devices[i].gain);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/gain-supported 1", i);
           }
           if(devices[i].supported & SDL_HAPTIC_AUTOCENTER) {
               fgfswrite(telnet_sock, "set /haptic/device[%d]/autocenter %f", i, devices[i].autocenter);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/autocenter-supported 1", i);
           }
     }
 }
@@ -328,7 +334,7 @@ void create_effects(void)
             devices[i].effectId[STICK_SHAKER] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[STICK_SHAKER]);
             if(devices[i].effectId[STICK_SHAKER] < 0) {
                 printf("UPLOADING EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution();
+                abort_execution(-1);
             }
         }
 
@@ -346,7 +352,7 @@ void create_effects(void)
             devices[i].effectId[CONST_X] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_X]);
             if(devices[i].effectId[CONST_X] < 0) {
                 printf("UPLOADING CONST_X EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution();
+                abort_execution(-1);
             }
         }
 
@@ -364,7 +370,7 @@ void create_effects(void)
             devices[i].effectId[CONST_Y] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_Y]);
             if(devices[i].effectId[CONST_Y] < 0) {
                 printf("UPLOADING CONST_Y EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution();
+                abort_execution(-1);
             }
         }
 
@@ -382,7 +388,7 @@ void create_effects(void)
             devices[i].effectId[CONST_Z] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_Z]);
             if(devices[i].effectId[CONST_Z] < 0) {
                 printf("UPLOADING CONST_Y EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution();
+                abort_execution(-1);
             }
         }
     }
@@ -437,18 +443,20 @@ void read_fg(void)
 int
 main(int argc, char **argv)
 {
-    int i;
-    char *name;
-    int index;
-    int nefx;
-    unsigned int supported;
-    const char *p;
+    int i = 0;
+    char *name = NULL;
     struct pollfd clientpoll;
-
+    struct sigaction signal_handler;
+    bool quit = false;
     effectParams *oldParams = NULL;
 
-    name = NULL;
-    index = -1;
+    // Handlers for ctrl+c etc quitting methods
+    signal_handler.sa_handler = abort_execution;
+    sigemptyset(&signal_handler.sa_mask);
+    signal_handler.sa_flags = 0;
+    sigaction(SIGINT, &signal_handler, NULL);
+    sigaction(SIGQUIT, &signal_handler, NULL);
+
 
     printf("fg-haptic version 0.1\n");
     printf("Force feedback support for Flight Gear\n");
@@ -466,7 +474,7 @@ main(int argc, char **argv)
 
         i = strlen(name);
         if ((i < 3) && isdigit(name[0]) && ((i == 1) || isdigit(name[1]))) {
-            index = atoi(name);
+            // index = atoi(name);
             name = NULL;
         }
     }
@@ -482,7 +490,7 @@ main(int argc, char **argv)
     server_sock = fgfsconnect(DFLTHOST, DFLTPORT+1, true);
     if(server_sock < 0) {
         printf("Failed to connect!\n");
-        abort_execution();
+        abort_execution(-1);
     }
 
     printf("Got connection, sending haptic details through telnet at port %d\n", DFLTPORT);
@@ -491,7 +499,7 @@ main(int argc, char **argv)
     telnet_sock = fgfsconnect(DFLTHOST, DFLTPORT, false);
     if (telnet_sock < 0) {
         printf("Could not connect to flightgear with telnet!\n");
-        abort_execution();
+        abort_execution(-1);
     }
 
     // Switch to data mode
@@ -505,7 +513,7 @@ main(int argc, char **argv)
     oldParams = (effectParams *)malloc(num_devices * sizeof(effectParams));
     if(!oldParams) {
         printf("Fatal error: Could not allocate memory!\n");
-        abort_execution();
+        abort_execution(-1);
     }
 
 
@@ -516,7 +524,7 @@ main(int argc, char **argv)
     clientpoll.fd = client_sock;
     clientpoll.events = POLLIN | POLLPRI; // Dunno about these..
     clientpoll.revents = 0;
-    while(1)  // Loop as long as the connection is alive
+    while(!quit)  // Loop as long as the connection is alive
     {
 
         poll(&clientpoll, 1, 0);
@@ -524,6 +532,8 @@ main(int argc, char **argv)
         // Back up old parameters
         for(int i=0; i < num_devices; i++)
             memcpy((void *)&oldParams[i], (void *)&devices[i].params, sizeof(effectParams));
+
+        memset((void *)&devices[i].params, 0, sizeof(effectParams));
 
         // Read new parameters
         read_fg();
@@ -620,8 +630,7 @@ main(int argc, char **argv)
 /*
  * Cleans up a bit.
  */
-static void
-abort_execution(void)
+void abort_execution(int signal)
 {
     printf("\nAborting program execution.\n");
 
@@ -649,8 +658,7 @@ abort_execution(void)
 /*
  * Displays information about the haptic device.
  */
-static void
-HapticPrintSupported(SDL_Haptic * haptic)
+void HapticPrintSupported(SDL_Haptic * haptic)
 {
     unsigned int supported;
 
