@@ -194,7 +194,15 @@ _setlistener("/sim/signals/nasal-dir-initialized", func {
   #stick_shaker_AoA = getprop("TND");
 
   # Add dialog to menu
+  props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/enabled", 1).setBoolValue(1);
+  props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/name", 1).setValue("force-feedback");
+  props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/label", 1).setValue("Force feedback options");
+  props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/binding/command", 1).setValue("dialog-show");
+  props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/binding/dialog-name", 1).setValue("force-feedback");
   #gui.menubind("Force feedback", "dialogs.force-feedback.open()");
+
+  # Reload menu so the new item will appear
+  fgcommand("reinit", props.Node.new({subsystem:"gui"}));
 
   # Set timer for main loop
   settimer(update_forces, update_interval);

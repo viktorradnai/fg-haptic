@@ -33,5 +33,7 @@ X With only control surface forces enabled, pushing or pulling stick
   to the limit causes forces to turn stick also sideways, even though
   the force should be 0
 
+- After reiniting menu, menubar hides. Press F10 to show it.
+
 
 - Not released yet so many many more bugs lurk in the shadows..

@@ -67,11 +67,6 @@ inside Flight Gear's data directory.
 ff-protocol.xml must be copied into Protocol/ directory
 inside Flight Gear's data directory.
 
-TODO: Menu item? Maybe force-feedback.nas will create that?
-
-Some day we might have a proper installer or something 
-to make installing a bit easier...
-
 
 
 RUNNING
@@ -83,7 +78,9 @@ Then launch flightgear with at least the following options:
 fgfs --telnet=5401 --generic=socket,out,20,localhost,5402,tcp,ff-protocol
 
 
-Inside Flight Gear's menu (where?) you can find Force feedback options. 
+If FlightGear's menu is not visible, press F10 to display it.
+In the Help menu you can find Force feedback options. 
 Tune them to your liking and fly!
 
-
+Don't worry about the "Timeout!"s spawning in the console, they
+happen if the communication is too slow between fg-haptic and fgfs.
