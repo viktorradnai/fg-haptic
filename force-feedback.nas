@@ -16,8 +16,8 @@ var stick_shaker_AoA = 16.0 * 3.14159/180.0;
 
 
 ###
-# Update different forces for device in <path>
-# i.e. /haptic/device[X]/
+# Update different forces
+
 
 # First pilot G
 var update_pilot_g = func(path) {
@@ -138,6 +138,26 @@ var update_stick_forces = func(path) {
 };
 
 
+# Ground rumble
+var update_ground_rumble = func(path) {
+  var rumble_path = path.getNode("ground-rumble");
+  if(rumble_path == nil) return;  # Bail out if rumble forces are not supported
+
+  var period = 0.0;
+
+  # Only do stuff if there is weigh on wheels
+  if(getprop("/gear/gear/wow")) {
+    var groundspeed = getprop("/velocities/groundspeed-kt");
+    if(groundspeed > 3.0 )
+      period = 175.0 / groundspeed;
+  }
+
+  var period_node = rumble_path.getNode("period");
+  if(period_node != nil) period_node.setValue(period); # Needs to be inverted
+};
+
+
+
 
 # Main loop
 var update_forces = func {
@@ -148,6 +168,7 @@ var update_forces = func {
   {
     update_pilot_g(haptic_node);
     update_stick_forces(haptic_node);
+    update_ground_rumble(haptic_node);
   }
 
   # Reset timer

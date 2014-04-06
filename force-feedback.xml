@@ -176,7 +176,7 @@
             <!-- <width>100</width> -->
             <property>/sim/gui/dialogs/force-feedback/control-surface-strength</property>
             <min>0</min>
-            <max>1</max>
+            <max>5</max>
             <step>0.01</step>
             <binding>
               <command>dialog-apply</command>
@@ -308,7 +308,7 @@
             <!-- <width>100</width> -->
             <property>/sim/gui/dialogs/force-feedback/pilot-g-strength</property>
             <min>0</min>
-            <max>1</max>
+            <max>5</max>
             <step>0.01</step>
             <binding>
               <command>dialog-apply</command>
@@ -508,6 +508,44 @@
     <!-- Right side -->
     <group>
       <layout>vbox</layout>
+
+      <!-- Name -->
+      <group>
+        <layout>hbox</layout>
+        <text><label>Ground rumble</label><enable><property>/sim/gui/dialogs/force-feedback/pilot-g-enable</property></enable></text>
+        <hrule><stretch>1</stretch></hrule>
+      </group>
+
+      <!-- Slider -->
+      <group>
+        <layout>hbox</layout>
+        <text><label>Strength</label><enable><property>/sim/gui/dialogs/force-feedback/pilot-g-enable</property></enable></text>
+        <slider>
+          <name>ground-rumble-strength</name>
+          <!-- <width>100</width> -->
+          <property>/sim/gui/dialogs/force-feedback/ground-rumble-strength</property>
+          <min>0</min>
+          <max>5</max>
+          <step>0.01</step>
+          <binding>
+            <command>dialog-apply</command>
+            <object-name>ground-rumble-strength</object-name>
+          </binding>
+          <binding>
+            <command>nasal</command>
+            <script>applyChanges();</script>
+          </binding>
+          <live>true</live>
+          <enable><property>/sim/gui/dialogs/force-feedback/pilot-g-enable</property></enable>
+        </slider>
+        <text>
+          <label>0.00</label>
+          <property>/sim/gui/dialogs/force-feedback/ground-rumble-strength</property>
+          <format>%-0.2f</format>
+          <live>true</live>
+          <enable><property>/sim/gui/dialogs/force-feedback/pilot-g-enable</property></enable>
+        </text>
+      </group>
     </group>
 
   </group>
@@ -611,6 +649,7 @@
             setprop("/haptic/device[" ~ i ~ "]/stick-shaker/gain", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-strength"));
             setprop("/haptic/device[" ~ i ~ "]/stick-shaker/direction", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-direction"));
             setprop("/haptic/device[" ~ i ~ "]/stick-shaker/period", getprop("/sim/gui/dialogs/force-feedback/stick-shaker-period"));
+            setprop("/haptic/device[" ~ i ~ "]/ground-rumble/gain", getprop("/sim/gui/dialogs/force-feedback/ground-rumble-strength"));
             # setprop("/haptic/device[" ~ i ~ "]/", getprop("/sim/gui/dialogs/force-feedback/"));
             # setprop("/haptic/device[" ~ i ~ "]/", getprop("/sim/gui/dialogs/force-feedback/"));
 
@@ -729,6 +768,12 @@
         effect = getprop("/haptic/device[" ~ dev ~ "]/stick-shaker/supported");
         if(effect == nil) setprop("/sim/gui/dialogs/force-feedback/stick-shaker-enable", "false");
         else setprop("/sim/gui/dialogs/force-feedback/stick-shaker-enable", "true");
+
+
+        # GROUND RUMBLE
+        effect = getprop("/haptic/device[" ~ dev ~ "]/ground-rumble/gain");
+        if(effect == nil) effect = 0;
+        setprop("/sim/gui/dialogs/force-feedback/ground-rumble-strength", effect);
 
 
         # TODO: Set combo box default/set values

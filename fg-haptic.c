@@ -13,6 +13,8 @@
 
 #include <signal.h>
 
+#include <time.h>
+
 /* From fgfsclient */
 #include <errno.h>
 #include <unistd.h>
@@ -38,13 +40,16 @@
 // 1) Rumble = stick shaker
 #define TIMEOUT		1e6   // 1 sec
 #define READ_TIMEOUT	5e6   // 5 secs
-#define EFFECTS		9
 #define AXES		3 	// Maximum axes supported
 
 #define CONST_X		0
 #define CONST_Y		1
 #define CONST_Z		2
 #define STICK_SHAKER	3
+#define FRICTION	4
+#define DAMPER		5
+
+#define EFFECTS		9
 
 const char axes[AXES] = {'x', 'y', 'z'};
 
@@ -62,6 +67,7 @@ typedef struct __effectParams {
     float pilot[AXES];
     float stick[AXES];
     int shaker_trigger;
+    float rumble_period;	// Ground rumble period, 0=disable
 } effectParams;
 
 int num_devices;
@@ -90,10 +96,13 @@ typedef struct __hapticdevice {
     float pilot_gain;
     float stick_gain;
     float shaker_gain;
+    float rumble_gain;
 
     // TODO: Possibility to invert axes
     signed char pilot_axes[AXES];  // Axes mapping, -1 = not used
     signed char stick_axes[AXES];
+
+    clock_t last_rumble;
 
 } hapticDevice;
 
@@ -135,6 +144,7 @@ void init_haptic(void)
         if(devices[i].device) {
           devices[i].open = true;
 
+          HapticPrintSupported(devices[i].device);
           // Copy devices name with ascii
           const char *p = SDL_HapticName(i);
           strncpy(devices[i].name, p, NAMELEN);
@@ -173,6 +183,7 @@ void init_haptic(void)
           devices[i].stick_gain = 1.0;
           devices[i].shaker_gain = 1.0;
           devices[i].shaker_period = 100.0;
+          devices[i].rumble_gain = 0.2;
 
         } else {
             printf("Unable to open haptic devices %d: %s\n", i, SDL_GetError());
@@ -223,6 +234,10 @@ void send_devices(void)
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/gain %f", i, devices[i].shaker_gain);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/trigger 0", i);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/supported 1", i);
+
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/period 0.0", i);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/gain %f", i, devices[i].rumble_gain);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_GAIN) {
@@ -283,6 +298,10 @@ void read_devices(void)
         fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/gain", i);
         read = sscanf(fgfsread(telnet_sock, READ_TIMEOUT), "%f", &fdata);
         if(read == 1) devices[i].shaker_gain = fdata;
+
+        fgfswrite(telnet_sock, "get /haptic/device[%d]/rumble/gain", i);
+        read = sscanf(fgfsread(telnet_sock, READ_TIMEOUT), "%f", &fdata);
+        if(read == 1) devices[i].rumble_gain = fdata;
     }
 
     fgfswrite(telnet_sock, "set /haptic/reconfigure 0");
@@ -391,6 +410,7 @@ void create_effects(void)
                 abort_execution(-1);
             }
         }
+
     }
 }
 
@@ -416,12 +436,12 @@ void read_fg(void)
     memset(&params, 0, sizeof(effectParams));
 
     // Divide the buffer into chunks
-    read = sscanf(p, "%d|%f|%f|%f|%f|%f|%f|%d", &reconf,
+    read = sscanf(p, "%d|%f|%f|%f|%f|%f|%f|%d|%f", &reconf,
                    &params.pilot[0], &params.pilot[1], &params.pilot[2],
 		   &params.stick[0], &params.stick[1], &params.stick[2],
-		   &params.shaker_trigger);
+		   &params.shaker_trigger, &params.rumble_period);
 
-    if(read != 8) {
+    if(read != 9) {
         printf("Error reading generic I/O!\n");
         return;
     }
@@ -449,6 +469,7 @@ main(int argc, char **argv)
     struct sigaction signal_handler;
     bool quit = false;
     effectParams *oldParams = NULL;
+    clock_t runtime = 0.0;
 
     // Handlers for ctrl+c etc quitting methods
     signal_handler.sa_handler = abort_execution;
@@ -526,6 +547,7 @@ main(int argc, char **argv)
     clientpoll.revents = 0;
     while(!quit)  // Loop as long as the connection is alive
     {
+        runtime = 1000 * clock() / CLOCKS_PER_SEC;  // Run time in ms
 
         poll(&clientpoll, 1, 0);
 
@@ -566,6 +588,16 @@ main(int argc, char **argv)
                 if(devices[i].pilot_axes[2] >= 0)
                     z += devices[i].params.pilot[devices[i].pilot_axes[2]] * devices[i].pilot_gain;
 
+
+                // Add ground rumble
+                if(devices[i].params.rumble_period > 0.00001) {
+                    if((runtime - devices[i].last_rumble) > devices[i].params.rumble_period) {
+                        y += devices[i].rumble_gain;
+                        devices[i].last_rumble = runtime;
+                    }
+                }
+
+
                 x = CLAMP(x, -1.0, 1.0) * 32760.0;
                 y = CLAMP(y, -1.0, 1.0) * 32760.0;
                 z = CLAMP(z, -1.0, 1.0) * 32760.0;
@@ -583,14 +615,16 @@ main(int argc, char **argv)
                     reload_effect(&devices[i], &devices[i].effect[CONST_Z], &devices[i].effectId[CONST_Z], true);
                 }
 
-		printf("\rX: %.6f  Y: %.6f  Z: %.6f", x, y, z);
+		// printf("\rX: %.6f  Y: %.6f  Z: %.6f", x, y, z);
             }
 
             // Stick shaker trigger
-            if(devices[i].supported & SDL_HAPTIC_SINE && devices[i].params.shaker_trigger &&
-               !oldParams[i].shaker_trigger && devices[i].effectId[STICK_SHAKER] != -1)
+            if((devices[i].supported & SDL_HAPTIC_SINE) && devices[i].effectId[STICK_SHAKER] != -1)
             {
-                reload_effect(&devices[i], &devices[i].effect[STICK_SHAKER], &devices[i].effectId[STICK_SHAKER], true);
+                if(devices[i].params.shaker_trigger && !oldParams[i].shaker_trigger)
+                    reload_effect(&devices[i], &devices[i].effect[STICK_SHAKER], &devices[i].effectId[STICK_SHAKER], true);
+                else if(!devices[i].params.shaker_trigger && oldParams[i].shaker_trigger)
+                    SDL_HapticStopEffect(devices[i].device, devices[i].effectId[STICK_SHAKER]);
             }
         }
 

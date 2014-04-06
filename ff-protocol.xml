@@ -68,6 +68,14 @@
        <node>/haptic//stick-shaker/trigger</node>
      </chunk>
 
+     <chunk>
+       <name>ground_rumble_period</name>
+       <format>%.6f</format>
+       <type>float</type>
+       <node>/haptic/ground-rumble/period</node>
+     </chunk>
+
+
    </output>
 </generic>
 </PropertyList>
