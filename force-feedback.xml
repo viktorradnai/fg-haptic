@@ -744,6 +744,10 @@
             gui.enable_widgets(cmdarg(), "control-surface-y", 0);
             gui.enable_widgets(cmdarg(), "pilot-g-y", 0);
           }
+          if(effect < 1) { # 0 Axis... rumble or something
+            gui.enable_widgets(cmdarg(), "control-surface-x", 0);
+            gui.enable_widgets(cmdarg(), "pilot-g-x", 0);
+          }
         }
 
         gui.dialog_update("force-feedback");
