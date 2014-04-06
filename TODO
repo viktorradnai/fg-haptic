@@ -4,17 +4,18 @@ TODO (In some kind of importance order, X=Done)
 X Fix configuration dialog => update properties
 
 - Fix properties for yasim and jsbsim surface forces
-- Make axis mapping to work
+X Make axis mapping to work
 
 - Add save default or aircraft and per device options
 
 - Clean up the code, make it C++
 
-- Add different gains for surface force axis?
+X Add different gains for surface force axis?
+  : Can be done in nasal
 
-- Add AoA setting to stick shaker => trigger
+X Add AoA setting to stick shaker => trigger
 - Check that stick shaker works with rumblepads!
-- Add stick pusher effect and its AoA setting
+X Add stick pusher effect and its AoA setting
 - Any other way to detect stall? What real devices use?
 
 - Add speed dependent autocenter force to be used instead
@@ -22,13 +23,13 @@ X Fix configuration dialog => update properties
 
 - Add engine rpm shaker?
 
-- Add ground bumps?
+X Add ground bumps?
 
 
 BUGS
 ----
 
-- With only control surface forces enabled, pushing or pulling stick 
+X With only control surface forces enabled, pushing or pulling stick 
   to the limit causes forces to turn stick also sideways, even though
   the force should be 0
 
