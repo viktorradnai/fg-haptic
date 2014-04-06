@@ -108,6 +108,7 @@ typedef struct __hapticdevice {
 
 static hapticDevice *devices = NULL;
 bool reconf_request = false;
+bool quit = false;
 
 #define CLAMP(x, l, h) ((x)>(h)?(h):((x)<(l)?(l):(x)))
 
@@ -467,7 +468,6 @@ main(int argc, char **argv)
     char *name = NULL;
     struct pollfd clientpoll;
     struct sigaction signal_handler;
-    bool quit = false;
     effectParams *oldParams = NULL;
     clock_t runtime = 0.0;
 
@@ -778,8 +778,10 @@ const char *fgfsread(int sock, int timeout)
                 perror("fgfsread");
                 exit(EXIT_FAILURE);
         }
-        if (len == 0)
+        if (len == 0) {  // Client disconnected
+                quit = true;
                 return NULL;
+        }
 
         // if(strlen(buf)) printf("%s\n\n", buf);
 
