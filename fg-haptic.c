@@ -29,7 +29,7 @@
 // #define USE_GENERIC 1
 
 #define DFLTHOST        "localhost"
-#define DFLTPORT        5403
+#define DFLTPORT        5401
 #define MAXMSG          512
 #define fgfsclose       close
 
