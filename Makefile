@@ -2,10 +2,15 @@
 
 srcdir  = .
 
-CC      = gcc
+# Parameters tosupport different library versions
+SDLVER = SDL2
 EXE	= 
-CFLAGS  = -g -O2 -I/usr/include/SDL2 -D_REENTRANT -DHAVE_OPENGL -std=c99 -D_POSIX_C_SOURCE -Wall
-LIBS	= -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL2 -lpthread -lm
+
+# Compiler parameters etc
+CC      = gcc
+CFLAGS  = -g -O2 -Wall -std=c99
+DEFS	= -D_REENTRANT -DHAVE_OPENGL -D_POSIX_C_SOURCE -D${SDLVER}
+LIBS	= -L/usr/local/lib -Wl,-rpath,/usr/local/lib -l${SDLVER} -lpthread -lm
 
 TARGETS = \
 	fg-haptic$(EXE) \
@@ -14,10 +19,10 @@ TARGETS = \
 all: $(TARGETS)
 
 fg-haptic$(EXE): $(srcdir)/fg-haptic.c
-	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $? $(DEFS) $(CFLAGS) $(LIBS)
 
 test-haptic$(EXE): $(srcdir)/test-haptic.c
-	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $? $(DEFS) $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f $(TARGETS)
