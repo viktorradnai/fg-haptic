@@ -174,6 +174,7 @@ void init_haptic(void)
           // Capabilities
           devices[i].supported = SDL_HapticQuery(devices[i].device);
           devices[i].axes = SDL_HapticNumAxes(devices[i].device);
+          if(devices[i].axes > AXES) devices[i].axes = AXES;
           devices[i].numEffects = SDL_HapticNumEffects(devices[i].device);
           devices[i].numEffectsPlaying = SDL_HapticNumEffectsPlaying(devices[i].device);
 
@@ -230,6 +231,10 @@ void send_devices(void)
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-force/gain %f", i, devices[i].stick_gain);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-force/supported 1", i);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/pilot/supported 1", i);
+
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/period 0.0", i);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/gain %f", i, devices[i].rumble_gain);
+              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_SINE)
@@ -240,10 +245,6 @@ void send_devices(void)
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/gain %f", i, devices[i].shaker_gain);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/trigger 0", i);
               fgfswrite(telnet_sock, "set /haptic/device[%d]/stick-shaker/supported 1", i);
-
-              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/period 0.0", i);
-              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/gain %f", i, devices[i].rumble_gain);
-              fgfswrite(telnet_sock, "set /haptic/device[%d]/ground-rumble/supported 1", i);
           }
 
           if(devices[i].supported & SDL_HAPTIC_GAIN) {
@@ -268,76 +269,86 @@ void read_devices(void)
 
     printf("Reading device setup from FG\n");
 
-    for(int i=0;i < num_devices; i++)
+    for(int i=0; i < num_devices; i++)
     {
         // Constant device settings
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/gain", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].gain = fdata;
+        if(devices[i].supported & SDL_HAPTIC_GAIN) {
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/gain", i);
+            p = fgfsread(telnet_sock, READ_TIMEOUT);
+            if(p) {
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].gain = fdata;
+            }
         }
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/autocenter", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].autocenter = fdata;
+
+        if(devices[i].supported & SDL_HAPTIC_AUTOCENTER) {
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/autocenter", i);
+            p = fgfsread(telnet_sock, READ_TIMEOUT);
+            if(p) {
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].autocenter = fdata;
+            }
         }
 
         // Constant force -> pilot G forces and aileron loading
         // Currently support 3 axis only
-        for(int x=0; x<devices[i].axes && x<AXES; x++) {
-            fgfswrite(telnet_sock, "get /haptic/device[%d]/pilot/%c", i, axes[x]);
+        if(devices[i].supported & SDL_HAPTIC_CONSTANT) {
+            for(int x=0; x<devices[i].axes && x<AXES; x++) {
+                fgfswrite(telnet_sock, "get /haptic/device[%d]/pilot/%c", i, axes[x]);
+                p = fgfsread(telnet_sock, READ_TIMEOUT);
+                if(p) {
+                    read = sscanf(p, "%d", &idata);
+                    if(read == 1) devices[i].pilot_axes[x] = idata;
+                }
+
+                fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-force/%c", i, axes[x]);
+                p = fgfsread(telnet_sock, READ_TIMEOUT);
+                if(p) {
+                    read = sscanf(p, "%d", &idata);
+                    if(read == 1) devices[i].stick_axes[x] = idata;
+                }
+            }
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/pilot/gain", i);
             p = fgfsread(telnet_sock, READ_TIMEOUT);
             if(p) {
-                read = sscanf(p, "%d", &idata);
-                if(read == 1) devices[i].pilot_axes[x] = idata;
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].pilot_gain = fdata;
             }
-
-            fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-force/%c", i, axes[x]);
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-force/gain", i);
             p = fgfsread(telnet_sock, READ_TIMEOUT);
             if(p) {
-                read = sscanf(p, "%d", &idata);
-                if(read == 1) devices[i].stick_axes[x] = idata;
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].stick_gain = fdata;
+            }
+
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/ground-rumble/gain", i);
+            p = fgfsread(telnet_sock, READ_TIMEOUT);
+            if(p) {
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].rumble_gain = fdata;
             }
         }
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/pilot/gain", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].pilot_gain = fdata;
-        }
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-force/gain", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].stick_gain = fdata;
-        }
 
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/direction", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].shaker_dir = fdata;
-        }
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/period", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].shaker_period = fdata;
-        }
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/gain", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].shaker_gain = fdata;
-        }
 
-        fgfswrite(telnet_sock, "get /haptic/device[%d]/ground-rumble/gain", i);
-        p = fgfsread(telnet_sock, READ_TIMEOUT);
-        if(p) {
-            read = sscanf(p, "%f", &fdata);
-            if(read == 1) devices[i].rumble_gain = fdata;
+        if(devices[i].supported & SDL_HAPTIC_SINE) {
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/direction", i);
+            p = fgfsread(telnet_sock, READ_TIMEOUT);
+            if(p) {
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].shaker_dir = fdata;
+            }
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/period", i);
+            p = fgfsread(telnet_sock, READ_TIMEOUT);
+            if(p) {
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].shaker_period = fdata;
+            }
+            fgfswrite(telnet_sock, "get /haptic/device[%d]/stick-shaker/gain", i);
+            p = fgfsread(telnet_sock, READ_TIMEOUT);
+            if(p) {
+                read = sscanf(p, "%f", &fdata);
+                if(read == 1) devices[i].shaker_gain = fdata;
+            }
         }
     }
 
@@ -350,7 +361,9 @@ void read_devices(void)
         else read = 0;
     } while(read == 1 && idata == 1);
     printf("Done\n");
+
     fgfsflush(client_sock);  // Get rid of FF data that was received during reinitialization
+
     return;
 }
 
