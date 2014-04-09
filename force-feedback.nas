@@ -17,6 +17,18 @@ var wing_shadow_AoA = 900.0*0.01745329;
 var wing_shadow_angle = 900.0*0.01745329;
 var stick_shaker_AoA = 16.0*0.01745329;
 
+var enable_force_trim_aileron = nil;
+var enable_force_trim_elevator = nil;
+var enable_force_trim_rudder = nil;
+var aileron_trim_prop = nil;
+var elevator_trim_prop = nil;
+var rudder_trim_prop = nil;
+var trim_rate = 0.045;
+
+var origAileronTrim = controls.aileronTrim;
+var origElevatorTrim = controls.elevatorTrim;
+var origRudderTrim = controls.rudderTrim;
+
 
 ###
 # Update different forces
@@ -64,9 +76,9 @@ var update_stick_forces = func(path) {
 
   #if(stick_force_path.getNode("gain").getValue() < 0.001) return;
 
-  var aileron_angle = getprop("/controls/flight/aileron")*aileron_max_deflection;
-  var elevator_angle = getprop("/controls/flight/elevator")*elevator_max_deflection;
-  var rudder_angle = getprop("/controls/flight/rudder")*rudder_max_deflection;
+  var aileron_angle = (getprop("/controls/flight/aileron") + aileron_trim_prop.getValue()) * aileron_max_deflection;
+  var elevator_angle = (getprop("/controls/flight/elevator") + elevator_trim_prop.getValue()) * elevator_max_deflection;
+  var rudder_angle = (getprop("/controls/flight/rudder") + rudder_trim_prop.getValue()) * rudder_max_deflection;
 
   var airspeed = getprop("/velocities/airspeed-kt");
   var AoA = getprop("/orientation/alpha-deg")*0.01745329;
@@ -181,6 +193,30 @@ var update_forces = func {
 
 
 ###
+# Trim functions
+controls.aileronTrim = func(rate) {
+  if(!enable_force_trim_aileron.getValue())
+    origAileronTrim(rate);
+  else
+    controls.slewProp("/haptic/force-trim-aileron", trim_rate*rate);
+};
+controls.elevatorTrim = func(rate) {
+  if(!enable_force_trim_elevator.getValue())
+    origElevatorTrim(rate);
+  else
+    controls.slewProp("/haptic/force-trim-elevator", trim_rate*rate);
+};
+controls.rudderTrim = func(rate) {
+  if(!enable_force_trim_rudder.getValue())
+    origRudderTrim(rate);
+  else
+    controls.slewProp("/haptic/force-trim-rudder", trim_rate*rate);
+};
+
+
+
+
+###
 # Read aircraft properties when fdm is ready
 _setlistener("/sim/signals/fdm-initialized", func {
   # Read aircraft setup
@@ -226,6 +262,18 @@ _setlistener("/sim/signals/nasal-dir-initialized", func {
   props.globals.initNode("/haptic/aircraft-setup/wing-shadow-angle-deg", wing_shadow_angle/0.01745329, "DOUBLE");
   props.globals.initNode("/haptic/aircraft-setup/stick-shaker-AoA", stick_shaker_AoA/0.01745329, "DOUBLE");
 
+  props.globals.initNode("/haptic/enable-force-trim-aileron", 0, "BOOL");
+  props.globals.initNode("/haptic/enable-force-trim-elevator", 0, "BOOL");
+  props.globals.initNode("/haptic/enable-force-trim-rudder", 0, "BOOL");
+  enable_force_trim_aileron = props.globals.getNode("/haptic/enable-force-trim-aileron", 1);
+  enable_force_trim_elevator = props.globals.getNode("/haptic/enable-force-trim-elevator", 1);
+  enable_force_trim_rudder = props.globals.getNode("/haptic/enable-force-trim-rudder", 1);
+  props.globals.initNode("/haptic/force-trim-aileron", 0.0, "DOUBLE");
+  props.globals.initNode("/haptic/force-trim-elevator", 0.0, "DOUBLE");
+  props.globals.initNode("/haptic/force-trim-rudder", 0.0, "DOUBLE");
+  aileron_trim_prop = props.globals.getNode("/haptic/force-trim-aileron", 1);
+  elevator_trim_prop = props.globals.getNode("/haptic/force-trim-elevator", 1);
+  rudder_trim_prop = props.globals.getNode("/haptic/force-trim-rudder", 1);
 
   # Add dialog to menu
   props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/enabled", 1).setBoolValue(1);
