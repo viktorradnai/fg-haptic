@@ -116,14 +116,17 @@ bool quit = false;
 effectParams new_params;
 
 
-#define CLAMP(x, l, h) ((x)>(h)?(h):((x)<(l)?(l):(x)))
-
-
 /*
  * prototypes
  */
 void abort_execution(int signal);
 void HapticPrintSupported(SDL_Haptic * haptic);
+
+
+float clamp(float x, float l, float h)
+{
+    return ((x)>(h)?(h):((x)<(l)?(l):(x)));
+}
 
 void init_haptic(void)
 {
@@ -194,7 +197,7 @@ void init_haptic(void)
           devices[i].stick_gain = 1.0;
           devices[i].shaker_gain = 1.0;
           devices[i].shaker_period = 100.0;
-          devices[i].rumble_gain = 0.2;
+          devices[i].rumble_gain = 0.4;
           devices[i].lowpass = 300.0;
 
         } else {
@@ -608,6 +611,7 @@ main(int argc, char **argv)
     }
 
 
+    printf("Running...\n");
 
     // Main loop
 
@@ -651,14 +655,6 @@ main(int argc, char **argv)
                     devices[i].params.z += new_params.pilot[devices[i].pilot_axes[2]] * devices[i].pilot_gain;
 
 
-                // Add ground rumble
-                if(devices[i].params.rumble_period > 0.00001) {
-                    if((runtime - devices[i].last_rumble) > devices[i].params.rumble_period) {
-                        devices[i].params.y += devices[i].rumble_gain;
-                        devices[i].last_rumble = runtime;
-                    }
-                }
-
                 devices[i].params.x *= 32760.0;
                 devices[i].params.y *= 32760.0;
                 devices[i].params.z *= 32760.0;
@@ -670,16 +666,27 @@ main(int argc, char **argv)
                 devices[i].params.y = devices[i].params.y * g1 + oldParams[i].y * g2;
                 devices[i].params.z = devices[i].params.z * g1 + oldParams[i].z * g2;
 
+
+                // Add ground rumble
+                float rumble = 0.0;
+                if(new_params.rumble_period > 0.00001) {
+                    if((runtime - devices[i].last_rumble) > new_params.rumble_period) {
+                        rumble = devices[i].rumble_gain * 32760.0;
+                        devices[i].last_rumble = runtime;
+                    }
+                }
+
+
                 if(devices[i].axes > 0 && devices[i].effectId[CONST_X] != -1) {
-                    devices[i].effect[CONST_X].constant.level = (signed short)CLAMP(devices[i].params.x, -32760.0, 32760.0);
+                    devices[i].effect[CONST_X].constant.level = (signed short)clamp(devices[i].params.x, -32760.0, 32760.0);
                     reload_effect(&devices[i], &devices[i].effect[CONST_X], &devices[i].effectId[CONST_X], true);
                 }
                 if(devices[i].axes > 1 && devices[i].effectId[CONST_Y] != -1) {
-                    devices[i].effect[CONST_Y].constant.level = (signed short)CLAMP(devices[i].params.y, -32760.0, 32760.0);;
+                    devices[i].effect[CONST_Y].constant.level = (signed short)clamp(devices[i].params.y+rumble, -32760.0, 32760.0);
                     reload_effect(&devices[i], &devices[i].effect[CONST_Y], &devices[i].effectId[CONST_Y], true);
                 }
                 if(devices[i].axes > 2 && devices[i].effectId[CONST_Z] != -1) {
-                    devices[i].effect[CONST_Z].constant.level = (signed short)CLAMP(devices[i].params.z, -32760.0, 32760.0);;
+                    devices[i].effect[CONST_Z].constant.level = (signed short)clamp(devices[i].params.z, -32760.0, 32760.0);;
                     reload_effect(&devices[i], &devices[i].effect[CONST_Z], &devices[i].effectId[CONST_Z], true);
                 }
 
@@ -689,9 +696,9 @@ main(int argc, char **argv)
             // Stick shaker trigger
             if((devices[i].supported & SDL_HAPTIC_SINE) && devices[i].effectId[STICK_SHAKER] != -1)
             {
-                if(devices[i].params.shaker_trigger && !oldParams[i].shaker_trigger)
+                if(new_params.shaker_trigger && !oldParams[i].shaker_trigger)
                     reload_effect(&devices[i], &devices[i].effect[STICK_SHAKER], &devices[i].effectId[STICK_SHAKER], true);
-                else if(!devices[i].params.shaker_trigger && oldParams[i].shaker_trigger)
+                else if(!new_params.shaker_trigger && oldParams[i].shaker_trigger)
                     SDL_HapticStopEffect(devices[i].device, devices[i].effectId[STICK_SHAKER]);
             }
         }
