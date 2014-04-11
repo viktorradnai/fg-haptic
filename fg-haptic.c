@@ -375,7 +375,7 @@ void create_effects(void)
 
         memset(&devices[i].effect[0],0 , sizeof(SDL_HapticEffect)*EFFECTS);
 
-        printf("Creating effects for device %d\n", i);
+        printf("Creating effects for device %d\n", i+1);
 
         // Set autocenter and gain
         if((devices[i].supported & SDL_HAPTIC_AUTOCENTER) && devices[i].autocenter > 0.001)
@@ -748,11 +748,12 @@ void abort_execution(int signal)
 /*
  * Displays information about the haptic device.
  */
-void HapticPrintSupported(SDL_Haptic * haptic)
+void HapticPrintSupported(SDL_Haptic *haptic)
 {
     unsigned int supported;
 
     supported = SDL_HapticQuery(haptic);
+    printf("   Device has %d axis\n", SDL_HapticNumAxes(haptic));
     printf("   Supported effects [%d effects, %d playing]:\n",
            SDL_HapticNumEffects(haptic), SDL_HapticNumEffectsPlaying(haptic));
     if (supported & SDL_HAPTIC_CONSTANT)
