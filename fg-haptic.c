@@ -525,24 +525,18 @@ main(int argc, char **argv)
     sigaction(SIGQUIT, &signal_handler, NULL);
 
 
-    printf("fg-haptic version 0.1\n");
+    printf("fg-haptic version 0.5\n");
     printf("Force feedback support for Flight Gear\n");
-    printf("Copyright 2011 Lauri Peltonen, released under GPLv2 or later\n\n");
+    printf("Copyright 2011, 2014 Lauri Peltonen, released under GPLv2 or later\n\n");
 
     if (argc > 1) {
         name = argv[1];
         if ((strcmp(name, "--help") == 0) || (strcmp(name, "-h") == 0)) {
-            printf("USAGE: %s [device]\n"
-                   "If device is a two-digit number it'll use it as an index, otherwise\n"
-                   "it'll use it as if it were part of the device's name.\n",
-                   argv[0]);
+            printf("USAGE: %s\n"
+                   "No parameters yet. Telnet port for FlightGear is %d and generic\n"
+                   "is %d. See Readme for details.\n",
+                   argv[0], DFLTPORT, DFLTPORT+1);
             return 0;
-        }
-
-        i = strlen(name);
-        if ((i < 3) && isdigit(name[0]) && ((i == 1) || isdigit(name[1]))) {
-            // index = atoi(name);
-            name = NULL;
         }
     }
 
