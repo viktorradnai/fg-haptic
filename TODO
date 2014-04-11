@@ -27,7 +27,8 @@ X Add stick pusher effect and its AoA setting
 X Add ground bumps?
   : Simple test done
 
-- Make autocenter and gain to not require device reconfigure
+X Make autocenter and gain to not require device reconfigure
+  : Not possible, since every device may have different setup...
 
 - Force feedback trimming, check directions!
 

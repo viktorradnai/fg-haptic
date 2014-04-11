@@ -65,6 +65,10 @@ typedef struct __effectParams {
     float stick[AXES];
     int shaker_trigger;
     float rumble_period;	// Ground rumble period, 0=disable
+
+    float x;  // Forces
+    float y;
+    float z;
 } effectParams;
 
 int num_devices;
@@ -99,13 +103,18 @@ typedef struct __hapticdevice {
     signed char pilot_axes[AXES];  // Axes mapping, -1 = not used
     signed char stick_axes[AXES];
 
-    clock_t last_rumble;
+    unsigned int last_rumble;
+
+    float lowpass;  // Low pass filter tau, in ms
 
 } hapticDevice;
 
 static hapticDevice *devices = NULL;
 bool reconf_request = false;
 bool quit = false;
+
+effectParams new_params;
+
 
 #define CLAMP(x, l, h) ((x)>(h)?(h):((x)<(l)?(l):(x)))
 
@@ -186,6 +195,7 @@ void init_haptic(void)
           devices[i].shaker_gain = 1.0;
           devices[i].shaker_period = 100.0;
           devices[i].rumble_gain = 0.2;
+          devices[i].lowpass = 300.0;
 
         } else {
             printf("Unable to open haptic devices %d: %s\n", i, SDL_GetError());
@@ -212,6 +222,9 @@ void send_devices(void)
           fgfswrite(telnet_sock, "set /haptic/device[%d]/axes %d", i, devices[i].axes);
           fgfswrite(telnet_sock, "set /haptic/device[%d]/num-effects %d", i, devices[i].numEffects);
           fgfswrite(telnet_sock, "set /haptic/device[%d]/num-effects-playing %d", i, devices[i].numEffectsPlaying);
+
+          fgfswrite(telnet_sock, "set /haptic/device[%d]/low-pass-filter %.6f", i, devices[i].lowpass);
+
 
           // Write supported effects
           if(devices[i].supported & SDL_HAPTIC_CONSTANT)
@@ -267,6 +280,13 @@ void read_devices(void)
     for(int i=0; i < num_devices; i++)
     {
         // Constant device settings
+        fgfswrite(telnet_sock, "get /haptic/device[%d]/low-pass-filter", i);
+        p = fgfsread(telnet_sock, READ_TIMEOUT);
+        if(p) {
+            read = sscanf(p, "%f", &fdata);
+            if(read == 1) devices[i].lowpass = fdata;
+        }
+
         if(devices[i].supported & SDL_HAPTIC_GAIN) {
             fgfswrite(telnet_sock, "get /haptic/device[%d]/gain", i);
             p = fgfsread(telnet_sock, READ_TIMEOUT);
@@ -378,10 +398,10 @@ void create_effects(void)
         printf("Creating effects for device %d\n", i+1);
 
         // Set autocenter and gain
-        if((devices[i].supported & SDL_HAPTIC_AUTOCENTER) && devices[i].autocenter > 0.001)
+        if(devices[i].supported & SDL_HAPTIC_AUTOCENTER)
             SDL_HapticSetAutocenter(devices[i].device, devices[i].autocenter * 100);
 
-        if((devices[i].supported & SDL_HAPTIC_GAIN) && devices[i].gain > 0.001)
+        if(devices[i].supported & SDL_HAPTIC_GAIN)
             SDL_HapticSetGain(devices[i].device, devices[i].gain * 100);
 
         // Stick shaker
@@ -475,19 +495,18 @@ void reload_effect(hapticDevice *device, SDL_HapticEffect *effect, int *effectId
 void read_fg(void)
 {
     int reconf, read;
-    effectParams params;
     const char *p;
 
     p = fgfsread(client_sock, TIMEOUT);
     if(!p) return;  // Null pointer, read failed
 
-    memset(&params, 0, sizeof(effectParams));
+    memset(&new_params, 0, sizeof(effectParams));
 
     // Divide the buffer into chunks
     read = sscanf(p, "%d|%f|%f|%f|%f|%f|%f|%d|%f", &reconf,
-                   &params.pilot[0], &params.pilot[1], &params.pilot[2],
-		   &params.stick[0], &params.stick[1], &params.stick[2],
-		   &params.shaker_trigger, &params.rumble_period);
+                   &new_params.pilot[0], &new_params.pilot[1], &new_params.pilot[2],
+		   &new_params.stick[0], &new_params.stick[1], &new_params.stick[2],
+		   &new_params.shaker_trigger, &new_params.rumble_period);
 
     if(read != 9) {
         printf("Error reading generic I/O!\n");
@@ -497,7 +516,7 @@ void read_fg(void)
     // printf("%s, %d\n", p, reconf);
 
     // Do it the easy way...
-    memcpy(&devices[0].params, &params, sizeof(effectParams));
+    // memcpy(&devices[0].params, &new_params, sizeof(effectParams));
 
     if(reconf & 1) reconf_request = true;
 }
@@ -515,7 +534,8 @@ main(int argc, char **argv)
     char *name = NULL;
     struct sigaction signal_handler;
     effectParams *oldParams = NULL;
-    clock_t runtime = 0.0;
+    unsigned int runtime = 0;
+    unsigned int dt = 0;
 
     // Handlers for ctrl+c etc quitting methods
     signal_handler.sa_handler = abort_execution;
@@ -593,7 +613,9 @@ main(int argc, char **argv)
 
     while(!quit)  // Loop as long as the connection is alive
     {
-        runtime = 1000 * clock() / CLOCKS_PER_SEC;  // Run time in ms
+        dt = runtime;
+        runtime = SDL_GetTicks();  // Run time in ms
+        dt = runtime - dt;
 
         // Back up old parameters
         for(int i=0; i < num_devices; i++)
@@ -612,54 +634,56 @@ main(int argc, char **argv)
             // Constant forces (stick forces, pilot G forces
 	    if((devices[i].supported & SDL_HAPTIC_CONSTANT))
             {
-                float x = 0.0;
-                float y = 0.0;
-                float z = 0.0;
-
                 // Stick forces with axis mapping
                 if(devices[i].stick_axes[0] >= 0)
-                    x = devices[i].params.stick[devices[i].stick_axes[0]] * devices[i].stick_gain;
+                    devices[i].params.x = new_params.stick[devices[i].stick_axes[0]] * devices[i].stick_gain;
                 if(devices[i].stick_axes[1] >= 0)
-                    y = devices[i].params.stick[devices[i].stick_axes[1]] * devices[i].stick_gain;
+                    devices[i].params.y = new_params.stick[devices[i].stick_axes[1]] * devices[i].stick_gain;
                 if(devices[i].stick_axes[2] >= 0)
-                    z = devices[i].params.stick[devices[i].stick_axes[2]] * devices[i].stick_gain;
+                    devices[i].params.z = new_params.stick[devices[i].stick_axes[2]] * devices[i].stick_gain;
 
                 // Pilot forces
                 if(devices[i].stick_axes[0] >= 0)
-                    x += devices[i].params.stick[devices[i].stick_axes[0]] * devices[i].stick_gain;
+                    devices[i].params.x += new_params.stick[devices[i].stick_axes[0]] * devices[i].stick_gain;
                 if(devices[i].pilot_axes[1] >= 0)
-                    y += devices[i].params.pilot[devices[i].pilot_axes[1]] * devices[i].pilot_gain;
+                    devices[i].params.y += new_params.pilot[devices[i].pilot_axes[1]] * devices[i].pilot_gain;
                 if(devices[i].pilot_axes[2] >= 0)
-                    z += devices[i].params.pilot[devices[i].pilot_axes[2]] * devices[i].pilot_gain;
+                    devices[i].params.z += new_params.pilot[devices[i].pilot_axes[2]] * devices[i].pilot_gain;
 
 
                 // Add ground rumble
                 if(devices[i].params.rumble_period > 0.00001) {
                     if((runtime - devices[i].last_rumble) > devices[i].params.rumble_period) {
-                        y += devices[i].rumble_gain;
+                        devices[i].params.y += devices[i].rumble_gain;
                         devices[i].last_rumble = runtime;
                     }
                 }
 
+                devices[i].params.x *= 32760.0;
+                devices[i].params.y *= 32760.0;
+                devices[i].params.z *= 32760.0;
 
-                x = CLAMP(x, -1.0, 1.0) * 32760.0;
-                y = CLAMP(y, -1.0, 1.0) * 32760.0;
-                z = CLAMP(z, -1.0, 1.0) * 32760.0;
+                // Low pass filter
+                float g1 = ((float)dt / (devices[i].lowpass + dt));
+                float g2 = (devices[i].lowpass / (devices[i].lowpass + dt));
+                devices[i].params.x = devices[i].params.x * g1 + oldParams[i].x * g2;
+                devices[i].params.y = devices[i].params.y * g1 + oldParams[i].y * g2;
+                devices[i].params.z = devices[i].params.z * g1 + oldParams[i].z * g2;
 
                 if(devices[i].axes > 0 && devices[i].effectId[CONST_X] != -1) {
-                    devices[i].effect[CONST_X].constant.level = (signed short)x;
+                    devices[i].effect[CONST_X].constant.level = (signed short)CLAMP(devices[i].params.x, -32760.0, 32760.0);
                     reload_effect(&devices[i], &devices[i].effect[CONST_X], &devices[i].effectId[CONST_X], true);
                 }
                 if(devices[i].axes > 1 && devices[i].effectId[CONST_Y] != -1) {
-                    devices[i].effect[CONST_Y].constant.level = (signed short)y;
+                    devices[i].effect[CONST_Y].constant.level = (signed short)CLAMP(devices[i].params.y, -32760.0, 32760.0);;
                     reload_effect(&devices[i], &devices[i].effect[CONST_Y], &devices[i].effectId[CONST_Y], true);
                 }
                 if(devices[i].axes > 2 && devices[i].effectId[CONST_Z] != -1) {
-                    devices[i].effect[CONST_Z].constant.level = (signed short)z;
+                    devices[i].effect[CONST_Z].constant.level = (signed short)CLAMP(devices[i].params.z, -32760.0, 32760.0);;
                     reload_effect(&devices[i], &devices[i].effect[CONST_Z], &devices[i].effectId[CONST_Z], true);
                 }
 
-		// printf("\rX: %.6f  Y: %.6f  Z: %.6f", x, y, z);
+		printf("dt: %d  X: %.6f  Y: %.6f\n", (unsigned int)dt, devices[i].params.x, devices[i].params.y);
             }
 
             // Stick shaker trigger
