@@ -1,12 +1,8 @@
 // Haptic
 #include <stdlib.h>
-#ifdef SDL_sdl2
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_haptic.h>
-#else
-#include <SDL/SDL.h>
-#include <SDL/SDL_haptic.h>
-#endif
+#include <SDL2/SDL_net.h>
 
 #include <stdio.h>              /* printf */
 #include <string.h>             /* strstr */
@@ -14,7 +10,6 @@
 
 #include <stdbool.h>		/* bool */
 #include <math.h>
-#include <sys/poll.h>
 
 #include <signal.h>
 
@@ -25,26 +20,22 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <stdarg.h>
 
-
-// #define USE_GENERIC 1
 
 #define DFLTHOST        "localhost"
 #define DFLTPORT        5401
 #define MAXMSG          512
-#define fgfsclose       close
+#define fgfsclose       SDLNet_TCP_Close
 
 #define NAMELEN		30
 
 // Currently supported effects:
 // 0) Constant force = pilot G and control surface loading
 // 1) Rumble = stick shaker
-#define TIMEOUT		1e6   // 1 sec
-#define READ_TIMEOUT	5e6   // 5 secs
+#define TIMEOUT		1   // 1 sec
+#define READ_TIMEOUT	5   // 5 secs
+#define CONN_TIMEOUT	30    // 30 seconds
 #define AXES		3 	// Maximum axes supported
 
 #define CONST_X		0
@@ -58,14 +49,15 @@
 
 const char axes[AXES] = {'x', 'y', 'z'};
 
-void init_sockaddr(struct sockaddr_in *name, const char *hostname, unsigned port);
-int fgfsconnect(const char *hostname, const int port, bool server);
-int fgfswrite(int sock, char *msg, ...);
-const char *fgfsread(int sock, int wait);
-void fgfsflush(int sock);
+//void init_sockaddr(struct sockaddr_in *name, const char *hostname, unsigned port);
+TCPsocket fgfsconnect(const char *hostname, const int port, bool server);
+int fgfswrite(TCPsocket sock, char *msg, ...);
+const char *fgfsread(TCPsocket sock, int wait);
+void fgfsflush(TCPsocket sock);
 
 // Socket used to communicate with flightgear
-int telnet_sock, server_sock, client_sock;
+TCPsocket telnet_sock, server_sock, client_sock;
+SDLNet_SocketSet socketset;
 
 // Effect struct definitions, used to store parameters
 typedef struct __effectParams {
@@ -127,7 +119,10 @@ void HapticPrintSupported(SDL_Haptic * haptic);
 void init_haptic(void)
 {
     /* Initialize the force feedbackness */
-    SDL_Init(/*SDL_INIT_VIDEO |*/ SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
+    SDL_Init(SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
+
+    // Initialize network
+    SDLNet_Init();
 
     num_devices = SDL_NumHaptics();
     printf("%d Haptic devices detected.\n", num_devices);
@@ -518,7 +513,6 @@ main(int argc, char **argv)
 {
     int i = 0;
     char *name = NULL;
-    struct pollfd clientpoll;
     struct sigaction signal_handler;
     effectParams *oldParams = NULL;
     clock_t runtime = 0.0;
@@ -558,10 +552,16 @@ main(int argc, char **argv)
     // Create & upload force feedback effects
     create_effects();
 
+    socketset = SDLNet_AllocSocketSet(2);
+    if(!socketset) {
+        printf("Unable to create socket set: %s\n", SDLNet_GetError());
+        abort_execution(-1);
+    }
+
     // Wait for a connection from flightgear generic io
     printf("\n\nWaiting for flightgear generic IO at port %d, please run Flight Gear now!\n", DFLTPORT+1);
     server_sock = fgfsconnect(DFLTHOST, DFLTPORT+1, true);
-    if(server_sock < 0) {
+    if(!server_sock) {
         printf("Failed to connect!\n");
         abort_execution(-1);
     }
@@ -570,10 +570,14 @@ main(int argc, char **argv)
 
     // Connect to flightgear using telnet
     telnet_sock = fgfsconnect(DFLTHOST, DFLTPORT, false);
-    if (telnet_sock < 0) {
+    if (!telnet_sock) {
         printf("Could not connect to flightgear with telnet!\n");
         abort_execution(-1);
     }
+
+    // Add sockets to a socket set for polling/selecting
+    SDLNet_TCP_AddSocket(socketset, client_sock);
+    SDLNet_TCP_AddSocket(socketset, telnet_sock);
 
     // Switch to data mode
     fgfswrite(telnet_sock, "data");
@@ -593,15 +597,9 @@ main(int argc, char **argv)
 
     // Main loop
 
-    // Wait until connection gives an error
-    clientpoll.fd = client_sock;
-    clientpoll.events = POLLIN | POLLPRI; // Dunno about these..
-    clientpoll.revents = 0;
     while(!quit)  // Loop as long as the connection is alive
     {
         runtime = 1000 * clock() / CLOCKS_PER_SEC;  // Run time in ms
-
-        poll(&clientpoll, 1, 0);
 
         // Back up old parameters
         for(int i=0; i < num_devices; i++)
@@ -697,6 +695,8 @@ main(int argc, char **argv)
     fgfsclose(client_sock);
     fgfsclose(server_sock);
 
+    SDLNet_FreeSocketSet(socketset);
+
     if(oldParams) free(oldParams);
     oldParams = NULL;
 
@@ -728,12 +728,16 @@ void abort_execution(int signal)
     fgfsclose(client_sock);
     fgfsclose(server_sock);
 
+    SDLNet_FreeSocketSet(socketset);
+
     // Close haptic devices
     for(int i=0; i < num_devices; i++)
       if(devices[i].open && devices[i].device) SDL_HapticClose(devices[i].device);
 
     if(devices) free(devices);
     devices = NULL;
+
+    SDLNet_Quit();
 
     SDL_Quit();
 
@@ -786,122 +790,145 @@ void HapticPrintSupported(SDL_Haptic * haptic)
 
 
 
-int fgfswrite(int sock, char *msg, ...)
+int fgfswrite(TCPsocket sock, char *msg, ...)
 {
         va_list va;
         ssize_t len;
         char buf[MAXMSG];
 
+        if(!sock) return 0;
+
         va_start(va, msg);
         vsnprintf(buf, MAXMSG - 2, msg, va);
         va_end(va);
         //printf("SEND: \t<%s>\n", buf);
-        strcat(buf, "\015\012");
+        strcat(buf, "\r\n");
 
-        len = write(sock, buf, strlen(buf));
+        len = SDLNet_TCP_Send(sock, buf, strlen(buf));
         if (len < 0) {
-                perror("fgfswrite");
+                printf("Error in fgfswrite: %s\n", SDLNet_GetError());
                 exit(EXIT_FAILURE);
         }
         return len;
 }
 
-const char *fgfsread(int sock, int timeout)
+const char *fgfsread(TCPsocket sock, int timeout)
 {
         static char buf[MAXMSG];
-        char *p;
-        fd_set ready;
-        struct timeval tv;
-        ssize_t len;
+        char *p = &buf[0];
+        size_t len = 0;
+        int ready = 0;
+        time_t start;
 
         memset(buf, 0, MAXMSG);
 
-        FD_ZERO(&ready);
-        FD_SET(sock, &ready);
-        tv.tv_sec = 0;
-        tv.tv_usec = timeout;
-        if (!select(32, &ready, 0, 0, &tv)) {
-            printf("Timeout!\n");
+        start = clock();
+        do {
+            ready = SDLNet_CheckSockets(socketset, timeout*1000);
+            if(!ready) {
+                //printf("Timeout!\n");
+                return NULL;
+            }
+
+            // TODO: Loop until socket is ready or timeout?
+            if(SDLNet_SocketReady(sock)) {
+                ready = 1;
+            }
+        } while(!ready && clock() < (start+timeout*CLOCKS_PER_SEC));
+
+        if(!ready) {
+            //printf("Error in fgfsread: Socket was not ready (timeout)!\n");
             return NULL;
         }
 
-        len = read(sock, buf, MAXMSG - 1);
-        if (len < 0) {
-                perror("fgfsread");
-                exit(EXIT_FAILURE);
-        }
-        if (len == 0) {  // Client disconnected
+        ready = 0;
+        do {
+            if(SDLNet_TCP_Recv(sock, p, 1) <= 0) {
+                // printf("Error in fgfsread: Recv returned zero!\n");
                 quit = true;
                 return NULL;
-        }
+            }
+            len++;
+            if(len == MAXMSG - 1) {
+                printf("Warning in fgfsread: Buffer size exceeded!\n");
+                ready = 1;
+            } else if(*p == '\n') {
+                ready = 1;
+            }
+            p++;
+        } while(!ready);
 
-        // if(strlen(buf)) printf("%s\n\n", buf);
 
         for (p = &buf[len - 1]; p >= buf; p--)
-                if (*p != '\015' && *p != '\012')
+                if (*p != '\r' && *p != '\n')
                         break;
         *++p = '\0';
+
+        // if(strlen(buf)) printf("RECV: %s\n", buf);
 
         return strlen(buf) ? buf : NULL;
 }
 
 
 
-void fgfsflush(int sock)
+void fgfsflush(TCPsocket sock)
 {
-        const char *p;
-        while ((p = fgfsread(sock, 0)) != NULL) {
-                //printf("IGNORE: \t<%s>\n", p);
-        }
+    const char *p;
+    while ((p = fgfsread(sock, 0)) != NULL) {
+        //printf("IGNORE: \t<%s>\n", p);
+    }
 }
 
-int fgfsconnect(const char *hostname, const int port, bool server)
+TCPsocket fgfsconnect(const char *hostname, const int port, bool server)
 {
-        struct sockaddr_in serv_addr, cli_addr;
-        socklen_t cli_size;
-        struct hostent *hostinfo;
-	int _sock, _clientsock;
+    IPaddress serv_addr, cli_addr;
+    TCPsocket _sock, _clientsock;
+    time_t start;
 
-        _sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (_sock < 0) {
-                perror("fgfsconnect/socket");
-                return -1;
+    if(!server)  // Act as a client -> connect to address
+    {
+        if(SDLNet_ResolveHost(&cli_addr, hostname, port) == -1)
+        {
+            printf("Error in fgfsconnect, resolve host: %s\n", SDLNet_GetError());
+            return NULL;
         }
 
-        hostinfo = gethostbyname(hostname);
-        if (hostinfo == NULL) {
-                fprintf(stderr, "fgfsconnect: unknown host: \"%s\"\n", hostname);
-                close(_sock);
-                return -2;
+        _sock = SDLNet_TCP_Open(&cli_addr);
+        if(!_sock) {
+            printf("Error in fgfsconnect, connect: %s\n", SDLNet_GetError());
+            return NULL;
         }
 
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(port);
-        serv_addr.sin_addr = *(struct in_addr *)hostinfo->h_addr_list[0];
-
-	if(!server)  // Act as a client -> connect to address
-	{
-	        if (connect(_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        	        perror("fgfsconnect/connect");
-                	close(_sock);
-	                return -3;
-		}
-        } else { // Act as a server, wait for connections
-		if(bind(_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        	        perror("fgfsconnect/bind");
-                	close(_sock);
-	                return -3;
-		}
-		listen(_sock, 1); // Wait for maximum of 1 conenction
-                cli_size = sizeof(cli_addr);
-		_clientsock = accept(_sock, (struct sockaddr *)&cli_addr, &cli_size);
-		if(_clientsock < 0) {
-        	        perror("fgfsconnect/accept");
-                	close(_sock);
-	                return -3;
-		}
-		client_sock = _clientsock;
-	}
         return _sock;
+
+    } else { // Act as a server, wait for connections
+        if(SDLNet_ResolveHost(&serv_addr, NULL, port) == -1)
+        {
+            printf("Error in fgfsconnect, server resolve host: %s\n", SDLNet_GetError());
+            return NULL;
+        }
+
+        _sock = SDLNet_TCP_Open(&serv_addr);
+        if(!_sock) {
+            printf("Error in fgfsconnect, server connect: %s\n", SDLNet_GetError());
+            return NULL;
+        }
+
+        // Wait for connection until timeout
+        start = clock();
+        do {
+            // TODO: Add a small sleep here
+            _clientsock = SDLNet_TCP_Accept(_sock);
+        } while(!_clientsock && clock() < (start+CONN_TIMEOUT*CLOCKS_PER_SEC));
+
+        if(!_clientsock) {
+            printf("Error in fgfsconnect: Connection timeout\n");
+            return NULL;
+        }
+
+        client_sock = _clientsock;
+
+        return _sock;
+    }
 }
 

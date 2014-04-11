@@ -1,12 +1,7 @@
 // Haptic
 #include <stdlib.h>
-#ifdef SDL_sdl2
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_haptic.h>
-#else
-#include <SDL/SDL.h>
-#include <SDL/SDL_haptic.h>
-#endif
 
 #include <stdio.h>              /* printf */
 #include <string.h>             /* strstr */
