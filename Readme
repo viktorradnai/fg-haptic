@@ -56,7 +56,7 @@ make fg-haptic
 Also SDL 1.3 or later should work (iirc 1.3 is the first
 with haptic support), but you must make with command:
 
-make fg-haptic SDLVER=SDL
+make fg-haptic SDLVER=sdl
 
 
 For windows, you might need to set EXE=.exe also, i.e.:
@@ -65,7 +65,7 @@ make fg-haptic EXE=.exe
 
 or 
 
-make fg-haptic SDLVER=SDL EXE=.exe
+make fg-haptic SDLVER=sdl EXE=.exe
 
 
 
