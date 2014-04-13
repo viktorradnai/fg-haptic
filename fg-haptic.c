@@ -424,7 +424,8 @@ void create_effects(void)
             devices[i].effectId[STICK_SHAKER] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[STICK_SHAKER]);
             if(devices[i].effectId[STICK_SHAKER] < 0) {
                 printf("UPLOADING EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution(-1);
+                devices[i].effectId[STICK_SHAKER] = -1;
+                devices[i].supported &= ~SDL_HAPTIC_SINE;
             }
         }
 
@@ -442,7 +443,8 @@ void create_effects(void)
             devices[i].effectId[CONST_X] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_X]);
             if(devices[i].effectId[CONST_X] < 0) {
                 printf("UPLOADING CONST_X EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution(-1);
+                devices[i].effectId[CONST_X] = -1;
+                devices[i].supported &= ~SDL_HAPTIC_CONSTANT;
             }
         }
 
@@ -460,7 +462,8 @@ void create_effects(void)
             devices[i].effectId[CONST_Y] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_Y]);
             if(devices[i].effectId[CONST_Y] < 0) {
                 printf("UPLOADING CONST_Y EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution(-1);
+                devices[i].effectId[CONST_Y] = -1;
+                devices[i].supported &= ~SDL_HAPTIC_CONSTANT;
             }
         }
 
@@ -478,7 +481,8 @@ void create_effects(void)
             devices[i].effectId[CONST_Z] = SDL_HapticNewEffect(devices[i].device, &devices[i].effect[CONST_Z]);
             if(devices[i].effectId[CONST_Z] < 0) {
                 printf("UPLOADING CONST_Y EFFECT ERROR: %s\n", SDL_GetError());
-                abort_execution(-1);
+                devices[i].effectId[CONST_Z] = -1;
+                devices[i].supported &= ~SDL_HAPTIC_CONSTANT;
             }
         }
 
