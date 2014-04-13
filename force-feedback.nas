@@ -29,6 +29,7 @@ var origAileronTrim = controls.aileronTrim;
 var origElevatorTrim = controls.elevatorTrim;
 var origRudderTrim = controls.rudderTrim;
 
+var test_duration = 0.0;
 
 ###
 # Update different forces
@@ -147,9 +148,9 @@ var update_stick_forces = func(path) {
   # Stick shaker
   if(AoA > stick_shaker_AoA)
   {
-    setprop("/haptic//stick-shaker/trigger", 1);
+    setprop("/haptic/stick-shaker/trigger", 1);
   } else {
-    setprop("/haptic//stick-shaker/trigger", 0);
+    setprop("/haptic/stick-shaker/trigger", 0);
   }
 };
 
@@ -174,17 +175,62 @@ var update_ground_rumble = func(path) {
 
 
 
+# Test mode
+var run_test_mode = func(path) {
+  var x = 0.0;
+  var y = 0.0;
+  var z = 0.0;
+  var shaker = 0;
+
+  var stick_force_path = path.getNode("stick-force");
+
+  if(test_duration < 10)
+  {
+    # Test constant force
+    x = math.sin(3.14159*test_duration/5.0);
+    y = math.cos(3.14159*test_duration/5.0);
+    z = math.sin(3.14159*test_duration/5.0);
+  }
+  else if(test_duration < 16)
+  {
+    # Test stick shaker
+    shaker = 1;
+  }
+  else
+  {
+    # Loop
+    test_duration = 0.0;
+  }
+
+  # Set parameters
+  if(stick_force_path != nil) {
+    stick_force_path.getNode("aileron").setValue(x);
+    stick_force_path.getNode("elevator").setValue(y);
+    stick_force_path.getNode("rudder").setValue(z);
+  }
+  setprop("/haptic/stick-shaker/trigger", shaker);
+
+  test_duration = test_duration + update_interval;
+};
+
+
 
 # Main loop
 var update_forces = func {
   # Loop through every device
   var haptic_node = props.globals.getNode("/haptic");
+  var test_mode = getprop("/haptic/test-mode");
 
-  if(haptic_node != nil)
+  if(!test_mode)
   {
-    update_pilot_g(haptic_node);
-    update_stick_forces(haptic_node);
-    update_ground_rumble(haptic_node);
+    if(haptic_node != nil)
+    {
+      update_pilot_g(haptic_node);
+      update_stick_forces(haptic_node);
+      update_ground_rumble(haptic_node);
+    }
+  } else {
+    run_test_mode(haptic_node);
   }
 
   # Reset timer
@@ -274,6 +320,9 @@ _setlistener("/sim/signals/nasal-dir-initialized", func {
   aileron_trim_prop = props.globals.getNode("/haptic/force-trim-aileron", 1);
   elevator_trim_prop = props.globals.getNode("/haptic/force-trim-elevator", 1);
   rudder_trim_prop = props.globals.getNode("/haptic/force-trim-rudder", 1);
+
+  props.globals.initNode("/haptic/test-mode", 0, "BOOL");
+
 
   # Add dialog to menu
   props.globals.getNode("/sim/menubar/default/menu[9]/item[99]/enabled", 1).setBoolValue(1);

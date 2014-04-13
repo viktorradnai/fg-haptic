@@ -553,6 +553,7 @@
 
   <hrule><stretch>1</stretch></hrule>
 
+
   <!-- Apply button -->
   <group>
     <layout>hbox</layout>
@@ -566,14 +567,31 @@
         <script>reconfigure();</script>
       </binding>
     </button>
-  </group>
+<!--  </group> -->
 
-  <!-- Close button -->
-  <group>
+  <!-- Test button -->
+<!--  <group> 
     <layout>hbox</layout>
 
     <empty><stretch>1</stretch></empty>
+-->
+    <button>
+      <legend>Test</legend>
+      <property>/haptic/test-mode</property>
+      <live>true</live>
+      <binding>
+        <command>property-toggle</command>
+        <property>/haptic/test-mode</property>
+      </binding>
+    </button>
+<!--  </group> -->
 
+  <!-- Close button -->
+<!--  <group>
+    <layout>hbox</layout>
+
+    <empty><stretch>1</stretch></empty>
+-->
     <button>
       <legend>Close</legend>
       <binding>
