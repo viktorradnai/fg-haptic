@@ -88,5 +88,9 @@ If FlightGear's menu is not visible, press F10 to display it.
 In the Help menu you can find Force feedback options. 
 Tune them to your liking and fly!
 
-Don't worry about the "Timeout!"s spawning in the console, they
-happen if the communication is too slow between fg-haptic and fgfs.
+
+To test force feedback effects, run
+
+fg-haptic --test    or   fg-haptic -t
+
+which tests all effects on all connected joysticks.

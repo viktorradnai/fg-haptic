@@ -528,6 +528,69 @@ void read_fg(void)
     if(reconf & 1) reconf_request = true;
 }
 
+void test_effects(void)
+{
+    unsigned int start;
+    unsigned int runtime = 0.0;
+    unsigned int dt;
+
+    for(int i=0; i<num_devices; i++)
+    {
+        printf("\nTesting device number %d, %s.\n", i+1, devices[i].name);
+        printf("HOLD FIRMLY TO YOUR JOYSTICK DURING THE TEST!\n\n");
+        if(devices[i].supported & SDL_HAPTIC_CONSTANT)
+        {
+            printf("Press [enter] to start constant force test.\n");
+            getchar();
+
+            start = SDL_GetTicks();
+            do {
+                runtime = SDL_GetTicks();
+                dt = runtime - start;
+
+                float x = cos(3.14159 * dt/3000.0)*32760.0;
+                float y = sin(3.14159 * dt/3000.0)*32760.0;
+                float z = sin(3.14159 * dt/3000.0)*32760.0;
+
+                if(runtime > start+6000) {
+                    x = y = z = 0.0;
+                }
+
+                if(devices[i].axes > 0 && devices[i].effectId[CONST_X] != -1) {
+                    devices[i].effect[CONST_X].constant.level = (signed short)clamp(x, -32760.0, 32760.0);
+                    reload_effect(&devices[i], &devices[i].effect[CONST_X], &devices[i].effectId[CONST_X], true);
+                }
+                if(devices[i].axes > 1 && devices[i].effectId[CONST_Y] != -1) {
+                    devices[i].effect[CONST_Y].constant.level = (signed short)clamp(y, -32760.0, 32760.0);
+                    reload_effect(&devices[i], &devices[i].effect[CONST_Y], &devices[i].effectId[CONST_Y], true);
+                }
+                if(devices[i].axes > 2 && devices[i].effectId[CONST_Z] != -1) {
+                    devices[i].effect[CONST_Z].constant.level = (signed short)clamp(z, -32760.0, 32760.0);
+                    reload_effect(&devices[i], &devices[i].effect[CONST_Z], &devices[i].effectId[CONST_Z], true);
+                }
+                SDL_Delay(100);
+            } while(runtime < start + 6500);
+        } else printf("Skipping constant force test: Not supported or effect creation was failed\n");
+
+        if((devices[i].supported & SDL_HAPTIC_SINE) && devices[i].effectId[STICK_SHAKER] != -1)
+        {
+            printf("Press [enter] to start rumble test.\n");
+            getchar();
+
+            reload_effect(&devices[i], &devices[i].effect[STICK_SHAKER], &devices[i].effectId[STICK_SHAKER], true);
+
+            start = SDL_GetTicks();
+            do {
+                runtime = SDL_GetTicks();
+                SDL_Delay(100);
+            } while(runtime < start + 5000);
+        } else printf("Skipping rumble test: Not supported or effect creation was failed\n");
+
+    }
+
+    printf("\nTest done!\n");
+}
+
 
 /**
  * @brief The entry point of this force feedback demo.
@@ -543,6 +606,7 @@ main(int argc, char **argv)
     effectParams *oldParams = NULL;
     unsigned int runtime = 0;
     unsigned int dt = 0;
+    bool test_mode = false;
 
     // Handlers for ctrl+c etc quitting methods
     signal_handler.sa_handler = abort_execution;
@@ -559,11 +623,17 @@ main(int argc, char **argv)
     if (argc > 1) {
         name = argv[1];
         if ((strcmp(name, "--help") == 0) || (strcmp(name, "-h") == 0)) {
-            printf("USAGE: %s\n"
-                   "No parameters yet. Telnet port for FlightGear is %d and generic\n"
-                   "is %d. See Readme for details.\n",
+            printf("USAGE: %s [optional parameters]\n"
+                   "    -h or --help : Show this help\n"
+                   "    -t or --test : Test force feedback effects\n\n"
+                   "Telnet port for FlightGear is %d and generic\n"
+                   "port is %d. See Readme for details.\n",
                    argv[0], DFLTPORT, DFLTPORT+1);
             return 0;
+        }
+        if ((strcmp(name, "--test") == 0) || (strcmp(name, "-t") == 0)) {
+            printf("Test mode enabled.\n");
+            test_mode = true;
         }
     }
 
@@ -572,6 +642,11 @@ main(int argc, char **argv)
 
     // Create & upload force feedback effects
     create_effects();
+
+    if(test_mode) {
+        test_effects();
+        abort_execution(0);
+    }
 
     socketset = SDLNet_AllocSocketSet(2);
     if(!socketset) {
@@ -713,6 +788,8 @@ main(int argc, char **argv)
             read_devices();
             create_effects();
         }
+
+        SDL_Delay(10);
     }
 
 
@@ -859,6 +936,7 @@ const char *fgfsread(TCPsocket sock, int timeout)
                 //printf("Timeout!\n");
                 return NULL;
             }
+            SDL_Delay(5);
 
             // TODO: Loop until socket is ready or timeout?
             if(SDLNet_SocketReady(sock)) {
@@ -947,7 +1025,7 @@ TCPsocket fgfsconnect(const char *hostname, const int port, bool server)
         // Wait for connection until timeout
         start = clock();
         do {
-            // TODO: Add a small sleep here
+            SDL_Delay(50);
             _clientsock = SDLNet_TCP_Accept(_sock);
         } while(!_clientsock && clock() < (start+CONN_TIMEOUT*CLOCKS_PER_SEC));
 
