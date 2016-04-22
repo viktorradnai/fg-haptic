@@ -51,12 +51,12 @@ Required libraries:
 
 fg-haptic should build by running:
 
-make fg-haptic
+    make fg-haptic
 
 
 For windows, you might need to set EXE=.exe also, i.e.:
 
-make fg-haptic EXE=.exe
+    make fg-haptic EXE=.exe
 
 
 
@@ -77,11 +77,11 @@ inside Flight Gear's data directory.
 
 RUNNING
 -------
-First run fg-haptic(.exe).
+First run ```fg-haptic(.exe)```.
 
 Then launch flightgear with at least the following options:
 
-fgfs --telnet=5401 --generic=socket,out,20,localhost,5402,tcp,ff-protocol
+    fgfs --telnet=5401 --generic=socket,out,20,localhost,5402,tcp,ff-protocol
 
 
 If FlightGear's menu is not visible, press F10 to display it.
@@ -91,6 +91,6 @@ Tune them to your liking and fly!
 
 To test force feedback effects, run
 
-fg-haptic --test    or   fg-haptic -t
+```fg-haptic --test```    or  ```fg-haptic -t```
 
 which tests all effects on all connected joysticks.
