@@ -393,7 +393,9 @@ void create_effects(void)
         // Delete existing effects
         for(int x=0; x < SDL_HapticNumEffects(devices[i].device); x++) {
             SDL_HapticDestroyEffect(devices[i].device, x);
-            devices[i].effectId[x] = -1;
+            if (x < sizeof(devices[i].effectId) / sizeof(devices[i].effectId[0])) {
+                devices[i].effectId[x] = -1;
+            }
         }
 
         memset(&devices[i].effect[0],0 , sizeof(SDL_HapticEffect)*EFFECTS);
